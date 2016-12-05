@@ -478,6 +478,8 @@ class BaseNetwork(object):
             collect['probs'][field] += probabilities[field]
 
     for i, collect in enumerate(collects):
+      for field in collect['probs']:
+        collect['probs'][field] /= len(self.other_save_dirs)+1
       with Timer('Parsing batch %d' % i):
         predictions = graph_outputs.probs_to_preds(collect['probs'], collect['lengths'])
         collect['tokens'].update({vocab.field: vocab[predictions[vocab.field]] for vocab in self.output_vocabs})
