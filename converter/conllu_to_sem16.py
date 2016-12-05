@@ -7,7 +7,7 @@ from collections import defaultdict
 #===============================================================
 def conllu_to_sem16(conllu_filename):
   """"""
-
+  
   with open(conllu_filename) as f:
     with open(conllu_filename+'.sem16', 'w') as g:
       buff = []
@@ -42,7 +42,6 @@ def conllu_to_sem16(conllu_filename):
 #***************************************************************
 if __name__ == '__main__':
   """"""
-
+  
   import sys
   conllu_to_sem16(sys.argv[1])
-
