@@ -61,7 +61,7 @@ class GraphParserNetwork(BaseNetwork):
           input_tensors.append(input_network.get_input_tensor(output, reuse=reuse))
       layer = tf.concat(input_tensors, 2)
 
-    n_nonzero = tf.to_float(tf.count_nonzero(layer, axis=-1, keepdims=True))
+    n_nonzero = tf.to_float(tf.count_nonzero(layer, axis=-1, keep_dims=True))
     batch_size, bucket_size, input_size = nn.get_sizes(layer)
     layer *= input_size / (n_nonzero + tf.constant(1e-12))
     
