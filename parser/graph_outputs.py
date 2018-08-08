@@ -207,7 +207,10 @@ class GraphOutputs(object):
     if 'semgraph' in probabilities:
       # (n x m x m x c)
       semgraph_probs = probabilities['semgraph']
-      if self._factored_semgraph:
+      if self._factored_semgraph and self.decoder == 'sem16':
+        print ('### Decoder:sem16 ###')
+        semgraph_preds = self.sem16decoder(semgraph_probs, lengths)
+      elif self._factored_semgraph:
         # (n x m x m x c) -> (n x m x m)
         semhead_probs = semgraph_probs.sum(axis=-1)
         # (n x m x m) -> (n x m x m)
@@ -230,6 +233,60 @@ class GraphOutputs(object):
               sparse_semgraph_preds[-1][-1].append((k, semgraph_preds[i,j,k]))
     return predictions
   
+  def sem16decoder(self, semgraph_probs, lengths):
+    # (n x m x m x c) -> (n x m x m)
+    semhead_probs = semgraph_probs.sum(axis=-1)
+    # (n x m x m) -> (n x m x m)
+    semhead_preds = np.where(semhead_probs >= .5, 1, 0)
+    # (n x m x m)
+    masked_semhead_preds = np.zeros(semhead_preds.shape, dtype=np.int32)
+    # mask by length
+    for i, (sem_preds, length) in enumerate(zip(semhead_preds, lengths)):
+      masked_semhead_preds[i,:length,:length] = sem_preds[:length,:length]
+    n_counts = {'no_root':0, 'multi_root':0, 'no_head':0, 'self_circle':0}
+    # for each sentence
+    #for i in range(len(masked_semhead_preds)):
+    for i, length in enumerate(lengths):
+      for j in range(length):
+        if masked_semhead_preds[i,j,j] == 1:
+          #print ('self circle line:',j,'\n',masked_semhead_preds[i])
+          n_counts['self_circle'] += 1
+          masked_semhead_preds = 0
+          #print ('new graph:\n',masked_semhead_preds[i])
+      n_root = np.sum(masked_semhead_preds[i,:,0])
+      if n_root == 0:
+        #print ('root:', n_root, '\n',masked_semhead_preds[i])
+        n_counts['no_root'] += 1
+        new_root = np.argmax(semhead_probs[i,1:,0]) + 1
+        masked_semhead_preds[i,new_root,0] = 1
+        #print ('new graph:\n', masked_semhead_preds[i])
+      elif n_root > 1:
+        #print ('root:', n_root, '\n',masked_semhead_preds[i])
+        n_counts['multi_root'] += 1
+        kept_root = np.argmax(semhead_probs[i,1:,0]) + 1
+        masked_semhead_preds[i,:,0] = 0
+        masked_semhead_preds[i,kept_root,0] = 1
+        #print ('new graph:\n', masked_semhead_preds[i])
+      n_heads = masked_semhead_preds[i,:length,:length].sum(axis=-1)
+      # no need to check line 0
+      n_heads[0] = 1
+      for j, n_head in enumerate(n_heads):
+        if n_head == 0:
+          #print ('no head line:',j,'\n',masked_semhead_preds[i])
+          n_counts['no_head'] += 1
+          # make sure the new head is not self circle
+          semhead_probs[i,j,j] = 0
+          new_head = np.argmax(semhead_probs[i,j,1:length]) + 1
+          masked_semhead_preds[i,j,new_head] = 1
+          #print ('new graph:\n',masked_semhead_preds[i])
+    print ('Corrected List:','\t'.join([key+':'+str(val) for key,val in n_counts.items()]))
+    # (n x m x m x c) -> (n x m x m)
+    semrel_preds = np.argmax(semgraph_probs, axis=-1)
+    # (n x m x m) (*) (n x m x m) -> (n x m x m)
+    semgraph_preds = masked_semhead_preds * semrel_preds
+
+    return semgraph_preds
+
   #=============================================================
   def cache_predictions(self, tokens, indices):
     """"""
@@ -495,6 +552,9 @@ class GraphOutputs(object):
   @property
   def dataset(self):
     return self._dataset
+  @property
+  def decoder(self):
+    return self._config.getstr(self, 'decoder')
 
 #***************************************************************
 class TrainOutputs(GraphOutputs):
