@@ -251,7 +251,7 @@ class GraphOutputs(object):
         if masked_semhead_preds[i,j,j] == 1:
           #print ('self circle line:',j,'\n',masked_semhead_preds[i])
           n_counts['self_circle'] += 1
-          masked_semhead_preds = 0
+          masked_semhead_preds[i,j,j] = 0
           #print ('new graph:\n',masked_semhead_preds[i])
       n_root = np.sum(masked_semhead_preds[i,:,0])
       if n_root == 0:
