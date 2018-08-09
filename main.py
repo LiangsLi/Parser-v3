@@ -270,7 +270,7 @@ def run(**kwargs):
   config_file = os.path.join(save_dir, 'config.cfg')
   kwargs['DEFAULT']['save_dir'] = save_dir
   kwargs['DEFAULT']['other_save_dirs'] = other_save_dirs
-  kwargs['DEFAULT']['conllu_files'] = conllu_files
+  kwargs['DEFAULT']['conllu_files'] = ':'.join(conllu_files)
   kwargs['DEFAULT']['elmo_test_filename'] = elmo_test_filename
 
   config = Config(defaults_file='', config_file=config_file, **kwargs)
