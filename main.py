@@ -100,6 +100,7 @@ def main():
   run_parser.add_argument('--output_dir')
   run_parser.add_argument('--output_filename')
   run_parser.add_argument('--other_save_dirs')
+  run_parser.add_argument('--elmo_test_filename')
   for section_name in section_names:
     run_parser.add_argument('--'+section_name, nargs='+')
     
@@ -250,6 +251,7 @@ def run(**kwargs):
   conllu_files = kwargs.pop('conllu_files')
   output_dir = kwargs.pop('output_dir')
   output_filename = kwargs.pop('output_filename')
+  elmo_test_filename = kwargs.pop('elmo_test_filename')
 
   # Get the cl-defined options
   kwargs = {key: value for key, value in six.iteritems(kwargs) if value is not None}
@@ -268,6 +270,8 @@ def run(**kwargs):
   config_file = os.path.join(save_dir, 'config.cfg')
   kwargs['DEFAULT']['save_dir'] = save_dir
   kwargs['DEFAULT']['other_save_dirs'] = other_save_dirs
+  kwargs['DEFAULT']['conllu_files'] = conllu_files
+  kwargs['DEFAULT']['elmo_test_filename'] = elmo_test_filename
 
   config = Config(defaults_file='', config_file=config_file, **kwargs)
   network_class = config.get('DEFAULT', 'network_class')
