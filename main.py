@@ -271,7 +271,9 @@ def run(**kwargs):
   kwargs['DEFAULT']['save_dir'] = save_dir
   kwargs['DEFAULT']['other_save_dirs'] = other_save_dirs
   kwargs['DEFAULT']['conllu_files'] = ':'.join(conllu_files)
-  kwargs['DEFAULT']['elmo_test_filename'] = elmo_test_filename
+  if elmo_test_filename:
+    kwargs['FormElmoVocab'] = {}
+    kwargs['FormElmoVocab']['elmo_test_filename'] = elmo_test_filename
 
   config = Config(defaults_file='', config_file=config_file, **kwargs)
   network_class = config.get('DEFAULT', 'network_class')
