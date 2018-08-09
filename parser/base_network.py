@@ -510,6 +510,9 @@ class BaseNetwork(object):
   def save_dir(self):
     return self._config.getstr(self, 'save_dir')
   @property
+  def other_save_dirs(self):
+    return self._config.getlist(self, 'other_save_dirs')
+  @property
   def vocabs(self):
     return self._vocabs
   @property
