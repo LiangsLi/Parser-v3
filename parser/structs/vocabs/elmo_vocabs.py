@@ -24,6 +24,7 @@ import os
 import codecs
 import zipfile
 import gzip
+import re
 try:
   import cPickle as pkl
 except ImportError:
@@ -32,6 +33,7 @@ from collections import Counter
 
 import numpy as np
 import tensorflow as tf
+import h5py
  
 from parser.structs.vocabs.base_vocabs import SetVocab
 from . import conllu_vocabs as cv
@@ -48,13 +50,16 @@ class ElmoVocab(SetVocab):
     """"""
 
     self._elmo_test_filename = config.getstr(self, 'elmo_test_filename')
+    #print ('Elmo test:',self._elmo_test_filename)
     if self._elmo_test_filename:
-      self._conllu_files = config.getstr(self, 'conllu_files')
+      self._conllu_files = config.getlist(self, 'conllu_files')
+      #print (self._conllu_files)
     else:
       self._elmo_train_filename = config.getstr(self, 'elmo_train_filename')
       self._elmo_dev_filename = config.getstr(self, 'elmo_dev_filename')
-      self._train_conllus = config.getstr(self, 'train_conllus')
-      self._dev_conllus = config.getstr(self, 'dev_conllus')
+      self._train_conllus = config.getlist(self, 'train_conllus')
+      self._dev_conllus = config.getlist(self, 'dev_conllus')
+      #print (self._train_conllus, self._dev_conllus)
 
     super(ElmoVocab, self).__init__(config=config)
     self._name = config.getstr(self, 'name')
@@ -111,10 +116,12 @@ class ElmoVocab(SetVocab):
       print ("### Loading ELMo for testset from {}! ###".format(self._elmo_test_filename))
       with h5py.File(self._elmo_test_filename, 'r') as f:
         for sid, sent in enumerate(self.iter_sents(self._conllu_files)):
-          elmo = f[' '.join(sent)].value
+          sent_ = '\t'.join(sent)
+          sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
+          elmo = f[sent_].value
           assert(len(elmo) == len(sent))
           embeddings.extend(elmo)
-          for wid in xrange(len(sent)):
+          for wid in range(len(sent)):
             self["testset-"+str(sid)+"-"+str(wid)] = cur_idx
             cur_idx += 1
     else:
@@ -122,10 +129,12 @@ class ElmoVocab(SetVocab):
         print ("### Loading ELMo for trainset from {}! ###".format(self._elmo_train_filename))
         with h5py.File(self._elmo_train_filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self._train_conllus)):
-            elmo = f[' '.join(sent)].value
+            sent_ = '\t'.join(sent)
+            sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
+            elmo = f[sent_].value
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
-            for wid in xrange(len(sent)):
+            for wid in range(len(sent)):
               self["trainset-"+str(sid)+"-"+str(wid)] = cur_idx
               cur_idx += 1
 
@@ -133,10 +142,12 @@ class ElmoVocab(SetVocab):
         print ("### Loading ELMo for devset from {}! ###".format(self._elmo_dev_filename))
         with h5py.File(self._elmo_dev_filename, 'r') as f:
           for sid, sent in enumerate(self.iter_sents(self._dev_conllus)):
-            elmo = f[' '.join(sent)].value
+            sent_ = '\t'.join(sent)
+            sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
+            elmo = f[sent_].value
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
-            for wid in xrange(len(sent)):
+            for wid in range(len(sent)):
               self["devset-"+str(sid)+"-"+str(wid)] = cur_idx
               cur_idx += 1
 
@@ -148,7 +159,7 @@ class ElmoVocab(SetVocab):
     except:
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
-    print ('Elmo size:',self._embed_size)
+    print ('### Elmo shape: {} ###'.format(self.embeddings.shape))
     return True
 
   #=============================================================
