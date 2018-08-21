@@ -116,7 +116,11 @@ class BaseNetwork(object):
                                              config=self._config)
     devset = conllu_dataset.CoNLLUDevset(self.vocabs,
                                          config=self._config)
+
     #testset = conllu_dataset.CoNLLUTestset(self.vocabs, config=self._config)
+
+    auxset = conllu_dataset.CoNLLUTrainset(self.vocabs,
+                                             config=self._config)
 
     factored_deptree = None
     factored_semgraph = None
