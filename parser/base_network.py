@@ -33,7 +33,7 @@ from tensorflow.python.client import timeline
 from debug.timer import Timer
 
 from parser.neural import nn, nonlin, embeddings, recurrent, classifiers
-from parser.graph_outputs import GraphOutputs, TrainOutputs, DevOutputs
+from parser.graph_outputs import GraphOutputs, TrainOutputs, DevOutputs, AuxOutputs
 from parser.structs import conllu_dataset
 from parser.structs import vocabs
 from parser.neural.optimizers import AdamOptimizer, AMSGradOptimizer
@@ -70,6 +70,7 @@ class BaseNetwork(object):
         self._id_vocab = vocabs.IDIndexVocab(config=config)
         extant_vocabs['IDIndexVocab'] = self._id_vocab
 
+      aux_conllus = self.aux_conllus or None
       self._input_vocabs = []
       for input_vocab_classname in self.input_vocab_classes:
         if input_vocab_classname in extant_vocabs:
@@ -77,7 +78,7 @@ class BaseNetwork(object):
         else:
           VocabClass = getattr(vocabs, input_vocab_classname)
           vocab = VocabClass(config=config)
-          vocab.load() or vocab.count(self.train_conllus)
+          vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
           self._input_vocabs.append(vocab)
           extant_vocabs[input_vocab_classname] = vocab
 
@@ -88,7 +89,7 @@ class BaseNetwork(object):
         else:
           VocabClass = getattr(vocabs, output_vocab_classname)
           vocab = VocabClass(config=config)
-          vocab.load() or vocab.count(self.train_conllus)
+          vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
           self._output_vocabs.append(vocab)
           extant_vocabs[output_vocab_classname] = vocab
 
@@ -99,7 +100,7 @@ class BaseNetwork(object):
         else:
           VocabClass = getattr(vocabs, throughput_vocab_classname)
           vocab = VocabClass(config=config)
-          vocab.load() or vocab.count(self.train_conllus)
+          vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
           self._throughput_vocabs.append(vocab)
           extant_vocabs[throughput_vocab_classname] = vocab
 
@@ -118,9 +119,8 @@ class BaseNetwork(object):
                                          config=self._config)
 
     #testset = conllu_dataset.CoNLLUTestset(self.vocabs, config=self._config)
-
-    auxset = conllu_dataset.CoNLLUTrainset(self.vocabs,
-                                             config=self._config)
+    use_aux = True if self.aux_conllus else False
+    auxset = None if not use_aux else conllu_dataset.CoNLLUAuxset(self.vocabs, config=self._config)
 
     factored_deptree = None
     factored_semgraph = None
@@ -143,6 +143,11 @@ class BaseNetwork(object):
       input_network_paths.append(self._config(self, input_network.classname+'_dir'))
     with tf.variable_scope(self.classname, reuse=False):
       train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False)
+      aux_outputs = None
+      if use_aux and 'auxhead' in train_graph[0]:
+        aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
+        aux_graph.append(train_graph[1])
+        aux_outputs = AuxOutputs(*aux_graph, load=load, evals=self._evals, factored_deptree=False, factored_semgraph=False, config=self._config)
       train_outputs = TrainOutputs(*train_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
     with tf.variable_scope(self.classname, reuse=True):
       dev_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=True)
@@ -156,6 +161,11 @@ class BaseNetwork(object):
     amsgrad = AMSGradOptimizer.from_optimizer(adam)
     amsgrad_op = amsgrad.minimize(train_outputs.loss + regularization_loss, variables=tf.trainable_variables(scope=self.classname)) # returns the current step
     amsgrad_train_tensors = [amsgrad_op, train_outputs.accuracies]
+    if use_aux and aux_outputs is not None:
+      aux_adam_op = adam.minimize(aux_outputs.loss, variables=tf.trainable_variables(scope=self.classname))
+      aux_adam_train_tensors = [aux_adam_op, aux_outputs.accuracies]
+      aux_amsgrad_op = amsgrad.minimize(aux_outputs.loss, variables=tf.trainable_variables(scope=self.classname))
+      aux_amsgrad_train_tensors = [aux_amsgrad_op, aux_outputs.accuracies]
     dev_tensors = dev_outputs.accuracies
     # I think this needs to come after the optimizers
     if self.save_model_after_improvement or self.save_model_after_training:
@@ -182,6 +192,8 @@ class BaseNetwork(object):
         def run(stdscr):
           current_optimizer = 'Adam'
           train_tensors = adam_train_tensors
+          if use_aux:
+            aux_tensors = aux_adam_train_tensors
           current_step = 0
           curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
           curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
@@ -220,11 +232,15 @@ class BaseNetwork(object):
             best_accuracy = 0
             current_accuracy = 0
             steps_since_best = 0
+            if use_aux:
+              aux_iter = auxset.batch_iterator(shuffle=True)
             while (not self.max_steps or current_step < self.max_steps) and \
                   (not self.max_steps_without_improvement or steps_since_best < self.max_steps_without_improvement) and \
                   (not self.n_passes or current_epoch < len(trainset.conllu_files)*self.n_passes):
               if steps_since_best >= 1 and self.switch_optimizers:
                 train_tensors = amsgrad_train_tensors
+                if use_aux:
+                  aux_tensors = aux_amsgrad_train_tensors
                 current_optimizer = 'AMSGrad'
               for batch in trainset.batch_iterator(shuffle=True):
                 train_outputs.restart_timer()
@@ -232,6 +248,20 @@ class BaseNetwork(object):
                 feed_dict = trainset.set_placeholders(batch)
                 _, train_scores = sess.run(train_tensors, feed_dict=feed_dict)
                 train_outputs.update_history(train_scores)
+
+                # run a auxiliary set batch
+                if use_aux:
+                  aux_batch = next(aux_iter, None)
+                  if aux_batch is None:
+                    #print ("### Reload auxset batches ###")
+                    aux_iter = auxset.batch_iterator(shuffle=True)
+                    aux_batch = next(aux_iter, None)
+                  #print ("### Train on one batch of auxset ###")
+                  aux_outputs.restart_timer()
+                  feed_dict = trainset.set_placeholders(batch)
+                  _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
+                  aux_outputs.update_history(aux_scores)
+
                 current_step += 1
                 if current_step % self.print_every == 0:
                   for batch in devset.batch_iterator(shuffle=False):
@@ -268,6 +298,8 @@ class BaseNetwork(object):
                   stdscr.addstr('Steps since improvement: {:4d}\n'.format(int(steps_since_best)),  curses.color_pair(1) | curses.A_BOLD)
                   stdscr.clrtoeol()
                   train_outputs.print_recent_history(stdscr)
+                  if use_aux:
+                    aux_outputs.print_recent_history(stdscr)
                   dev_outputs.print_recent_history(stdscr)
                   print('')
                   stdscr.move(2,0)
@@ -298,6 +330,8 @@ class BaseNetwork(object):
       else:
         current_optimizer = 'Adam'
         train_tensors = adam_train_tensors
+        if use_aux:
+          aux_tensors = aux_adam_train_tensors
         current_step = 0
         print('\t', end='')
         print('{}\n'.format(self.save_dir), end='')
@@ -308,15 +342,20 @@ class BaseNetwork(object):
           best_accuracy = 0
           current_accuracy = 0
           steps_since_best = 0
+          if use_aux:
+            aux_iter = auxset.batch_iterator(shuffle=True)
           while (not self.max_steps or current_step < self.max_steps) and \
                 (not self.max_steps_without_improvement or steps_since_best < self.max_steps_without_improvement) and \
                 (not self.n_passes or current_epoch < len(trainset.conllu_files)*self.n_passes):
             if steps_since_best >= 1 and self.switch_optimizers and current_optimizer != 'AMSGrad':
               train_tensors = amsgrad_train_tensors
+              if use_aux:
+                aux_tensors = aux_amsgrad_train_tensors
               current_optimizer = 'AMSGrad'
               print('\t', end='')
               print('Current optimizer: {}\n'.format(current_optimizer), end='')
             for batch in trainset.batch_iterator(shuffle=True):
+              #print ("### Train on one batch of trainset ###")
               train_outputs.restart_timer()
               start_time = time.time()
               feed_dict = trainset.set_placeholders(batch)
@@ -331,6 +370,20 @@ class BaseNetwork(object):
                 _, train_scores = sess.run(train_tensors, feed_dict=feed_dict)
               #---
               train_outputs.update_history(train_scores)
+
+              # run a auxiliary set batch
+              if use_aux:
+                aux_batch = next(aux_iter, None)
+                if aux_batch is None:
+                  #print ("### Reload auxset batches ###")
+                  aux_iter = auxset.batch_iterator(shuffle=True)
+                  aux_batch = next(aux_iter, None)
+                #print ("### Train on one batch of auxset ###")
+                aux_outputs.restart_timer()
+                feed_dict = trainset.set_placeholders(batch)
+                _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
+                aux_outputs.update_history(aux_scores)
+
               current_step += 1
               if current_step % self.print_every == 0:
                 for batch in devset.batch_iterator(shuffle=False):
@@ -361,6 +414,8 @@ class BaseNetwork(object):
                 print('\t', end='')
                 print('Steps since improvement: {:4d}\n'.format(int(steps_since_best)), end='')
                 train_outputs.print_recent_history()
+                if use_aux:
+                  aux_outputs.print_recent_history()
                 dev_outputs.print_recent_history()
             current_epoch = sess.run(self.global_step)
             sess.run(update_step)
@@ -393,6 +448,8 @@ class BaseNetwork(object):
     with Timer('Building TF'):
       with tf.variable_scope(self.classname, reuse=False):
         parse_graph = self.build_graph(reuse=True)
+        if 'auxhead' in parse_graph[0]:
+          parse_graph[0].pop('auxhead')
         parse_outputs = DevOutputs(*parse_graph, load=False, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
       parse_tensors = parse_outputs.accuracies
       all_variables = set(tf.global_variables())
@@ -561,6 +618,9 @@ class BaseNetwork(object):
   @property
   def train_conllus(self):
     return self._config.getfiles(self, 'train_conllus')
+  @property
+  def aux_conllus(self):
+    return self._config.getfiles(self, 'aux_conllus')
   @property
   def cuda_visible_devices(self):
     return os.getenv('CUDA_VISIBLE_DEVICES')

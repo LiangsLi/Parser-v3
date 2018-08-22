@@ -148,6 +148,7 @@ class CoNLLUDataset(set):
         batches.extend(np.array_split(subdata, n_splits))
     if shuffle:
       np.random.shuffle(batches)
+    #print ("Batch size:{}, Batch num:{}".format(self.batch_size,len(batches)))
     return iter(batches)
     
   #=============================================================

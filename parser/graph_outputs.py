@@ -109,7 +109,14 @@ class GraphOutputs(object):
               'n_edges': 0,
               'sequences': [0]
             }
-            
+        elif field == 'auxhead':
+          self.history['semhead'] = {
+              'loss': [0],
+              'tokens': [0],
+              'fp_tokens': 0,
+              'fn_tokens': 0,
+              'sequences': [0]
+            }
         elif field == 'deptree':
           for string in ('head', 'tree'):
             self.history['dep'+string] = {
@@ -432,6 +439,12 @@ class GraphOutputs(object):
         self.history['deptree']['loss'][-1] += output['loss']
         self.history['deptree']['tokens'][-1] += output['n_correct_tokens']
         self.history['deptree']['sequences'][-1] += output['n_correct_sequences']
+      elif field == 'auxhead':
+        self.history['semhead']['loss'][-1] += output['unlabeled_loss']
+        self.history['semhead']['tokens'][-1] += output['n_unlabeled_true_positives']
+        self.history['semhead']['fp_tokens'] += output['n_unlabeled_false_positives']
+        self.history['semhead']['fn_tokens'] += output['n_unlabeled_false_negatives']
+        self.history['semhead']['sequences'][-1] += output['n_correct_unlabeled_sequences']
       elif field != 'total':
         self.history[field]['loss'][-1] += output['loss']
         self.history[field]['tokens'][-1] += output['n_correct_tokens']
@@ -561,3 +574,5 @@ class TrainOutputs(GraphOutputs):
   _dataset = 'train'
 class DevOutputs(GraphOutputs):
   _dataset = 'dev'
+class AuxOutputs(GraphOutputs):
+  _dataset = 'aux'

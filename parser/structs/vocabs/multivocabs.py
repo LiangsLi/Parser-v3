@@ -105,12 +105,12 @@ class Multivocab(BaseVocab, list):
     return status
   
   #=============================================================
-  def count(self, train_conllus):
+  def count(self, train_conllus, aux_conllus=None):
     """"""
     
     status = True
     for vocab in self:
-      status = (vocab._loaded or vocab.count(train_conllus) if hasattr(vocab, 'count') else True) and status
+      status = (vocab._loaded or vocab.count(train_conllus, aux_conllus) if hasattr(vocab, 'count') else True) and status
     return status
   
   #=============================================================

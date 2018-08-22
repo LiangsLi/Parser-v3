@@ -112,6 +112,7 @@ class GraphMTLNetwork(BaseNetwork):
               layer,
               token_weights=token_weights3D,
               reuse=reuse)
+            unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
           with tf.variable_scope('Labeled'):
             labeled_outputs = vocab.get_bilinear_classifier(
               layer, unlabeled_outputs,
@@ -131,14 +132,42 @@ class GraphMTLNetwork(BaseNetwork):
               token_weights=token_weights3D,
               reuse=reuse,
               hidden_size=self.aux_hidden_size)
-      outputs['aux'] = aux_outputs
+      if self.share_head_mlp:
+        outputs['auxhead'] = unlabeled_copy
+      else:
+        outputs['auxhead'] = aux_outputs
     
     return outputs, tokens
   
+  def copy_unlabeled(self, outputs):
+    copy = {
+    'unlabeled_targets': outputs['unlabeled_targets'],
+    'probabilities': outputs['probabilities'],
+    'unlabeled_loss': outputs['unlabeled_loss'],
+    'loss': outputs['loss'],
+    
+    'unlabeled_predictions': outputs['unlabeled_predictions'],
+    'n_unlabeled_true_positives': outputs['n_unlabeled_true_positives'],
+    'n_unlabeled_false_positives': outputs['n_unlabeled_false_positives'],
+    'n_unlabeled_false_negatives': outputs['n_unlabeled_false_negatives'],
+    'n_correct_unlabeled_sequences': outputs['n_correct_unlabeled_sequences'],
+    'predictions': outputs['predictions'],
+    'n_true_positives': outputs['n_true_positives'],
+    'n_false_positives': outputs['n_false_positives'],
+    'n_false_negatives': outputs['n_false_negatives'],
+    'n_correct_sequences': outputs['n_correct_sequences']
+    }
+    return copy
+
   #=============================================================
   @property
   def sum_pos(self):
     return self._config.getboolean(self, 'sum_pos')
+  # semrel.factorized has to be True if this is True
+  @property
+  def share_head_mlp(self):
+    return self._config.getboolean(self, 'share_head_mlp')
   @property
   def aux_hidden_size(self):
     return self._config.getint(self, 'aux_hidden_size')
+    

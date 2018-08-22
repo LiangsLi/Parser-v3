@@ -131,11 +131,12 @@ class SubtokenVocab(CountVocab):
     return layer
 
   #=============================================================
-  def count(self, train_conllus):
+  def count(self, train_conllus, aux_conllus=None):
     """"""
 
+    conllus = train_conllus + aux_conllus if aux_conllus is not None else train_conllus
     tokens = set()
-    for train_conllu in train_conllus:
+    for train_conllu in conllus:
       with codecs.open(train_conllu, encoding='utf-8', errors='ignore') as f:
         for line in f:
           line = line.strip()
