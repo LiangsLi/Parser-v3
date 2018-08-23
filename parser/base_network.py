@@ -175,12 +175,13 @@ class BaseNetwork(object):
 
     screen_output = []
     config = tf.ConfigProto()
-    config.device_count['CPU'] = self.cpu_num
+    if self.cpu_num > 0:
+      config.device_count['CPU'] = self.cpu_num
     # These 2 should be used to control threads while using only CPU
-    if self.intra_threads:
+    if self.intra_threads > 0:
       print ("Intra threads:",self.intra_threads)
       config.intra_op_parallelism_threads=self.intra_threads
-    if self.inter_threads:
+    if self.inter_threads > 0:
       print ("Inter threads:",self.inter_threads)
       config.inter_op_parallelism_threads=self.inter_threads
     config.gpu_options.allow_growth = True
