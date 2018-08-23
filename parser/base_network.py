@@ -175,7 +175,7 @@ class BaseNetwork(object):
       saver = tf.train.Saver(list(save_variables), max_to_keep=1)
 
     screen_output = []
-    config = tf.ConfigProto()
+    config = tf.ConfigProto(device_count={"CPU": self.cpu_num})
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
     with tf.Session(config=config) as sess:
@@ -767,3 +767,6 @@ class BaseNetwork(object):
   @property
   def share_layer(self):
     return self._config.getboolean(self, 'share_layer')
+  @property
+  def cpu_num(self):
+    return self._config.getint(self, 'cpu_num')
