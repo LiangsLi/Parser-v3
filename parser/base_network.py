@@ -47,11 +47,10 @@ class BaseNetwork(object):
   #=============================================================
   def __init__(self, input_networks=set(), config=None):
     """"""
-
+    
     with Timer('Initializing the network (including pretrained vocab)'):
       self._config = config
-      #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
+      #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
       self._input_networks = input_networks
       input_network_classes = set(input_network.classname for input_network in self._input_networks)
       assert input_network_classes == set(self.input_network_classes), 'Not all input networks were passed in to {}'.format(self.classname)
@@ -175,7 +174,15 @@ class BaseNetwork(object):
       saver = tf.train.Saver(list(save_variables), max_to_keep=1)
 
     screen_output = []
-    config = tf.ConfigProto(device_count={"CPU": self.cpu_num})
+    config = tf.ConfigProto()
+    config.device_count['CPU'] = self.cpu_num
+    # These 2 should be used to control threads while using only CPU
+    if self.intra_threads:
+      print ("Intra threads:",self.intra_threads)
+      config.intra_op_parallelism_threads=self.intra_threads
+    if self.inter_threads:
+      print ("Inter threads:",self.inter_threads)
+      config.inter_op_parallelism_threads=self.inter_threads
     config.gpu_options.allow_growth = True
     config.allow_soft_placement = True
     with tf.Session(config=config) as sess:
@@ -770,3 +777,9 @@ class BaseNetwork(object):
   @property
   def cpu_num(self):
     return self._config.getint(self, 'cpu_num')
+  @property
+  def intra_threads(self):
+    return self._config.getint(self, 'intra_threads')
+  @property
+  def inter_threads(self):
+    return self._config.getint(self, 'inter_threads')
