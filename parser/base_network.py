@@ -88,7 +88,10 @@ class BaseNetwork(object):
         else:
           VocabClass = getattr(vocabs, output_vocab_classname)
           vocab = VocabClass(config=config)
-          vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
+          if 'Semrel' in output_vocab_classname:
+            vocab.load() or vocab.count(self.train_conllus, aux_conllus=None)
+          else:
+            vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
           self._output_vocabs.append(vocab)
           extant_vocabs[output_vocab_classname] = vocab
 
@@ -141,18 +144,18 @@ class BaseNetwork(object):
       input_network_savers.append(saver)
       input_network_paths.append(self._config(self, input_network.classname+'_dir'))
     with tf.variable_scope(self.classname, reuse=False):
-      with tf.device('/cpu:0'):
-        train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False)
-        aux_outputs = None
-        if use_aux and 'auxhead' in train_graph[0]:
-          aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
-          aux_graph.append(train_graph[1])
-          aux_outputs = AuxOutputs(*aux_graph, load=load, evals=self._evals, factored_deptree=False, factored_semgraph=False, config=self._config)
-        train_outputs = TrainOutputs(*train_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
+      #with tf.device('/gpu:0'):
+      train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False)
+      aux_outputs = None
+      if use_aux and 'auxhead' in train_graph[0]:
+        aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
+        aux_graph.append(train_graph[1])
+        aux_outputs = AuxOutputs(*aux_graph, load=load, evals=self._evals, factored_deptree=False, factored_semgraph=False, config=self._config)
+      train_outputs = TrainOutputs(*train_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
     with tf.variable_scope(self.classname, reuse=True):
-      with tf.device('/cpu:0'):
-        dev_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=True)
-        dev_outputs = DevOutputs(*dev_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
+      #with tf.device('/gpu:0'):
+      dev_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=True)
+      dev_outputs = DevOutputs(*dev_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
     regularization_loss = self.l2_reg * tf.losses.get_regularization_loss() if self.l2_reg else 0
 
     update_step = tf.assign_add(self.global_step, 1)
@@ -375,8 +378,8 @@ class BaseNetwork(object):
                 start_time = time.time()
                 feed_dict = trainset.set_placeholders(batch)
                 #---
-                with tf.device('/gpu:%d' % current_gpu_idx):
-                  print ('using gpu: %s' % gpus[current_gpu_idx])
+                #with tf.device('/gpu:%d' % current_gpu_idx):
+                with tf.device('/gpu:0'):
                   if current_step < 10:
                     _, train_scores = sess.run(train_tensors, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
                     fetched_timeline = timeline.Timeline(run_metadata.step_stats)
