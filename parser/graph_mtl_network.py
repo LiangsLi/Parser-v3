@@ -114,10 +114,11 @@ class GraphMTLNetwork(BaseNetwork):
               reuse=reuse)
             unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
           with tf.variable_scope('Labeled'):
-            labeled_outputs = vocab.get_bilinear_classifier(
-              layer, unlabeled_outputs,
-              token_weights=token_weights3D,
-              reuse=reuse)
+            with tf.device('/gpu:1'):
+              labeled_outputs = vocab.get_bilinear_classifier(
+                layer, unlabeled_outputs,
+                token_weights=token_weights3D,
+                reuse=reuse)
         else:
           labeled_outputs = vocab.get_unfactored_bilinear_classifier(layer, head_vocab.placeholder,
             token_weights=token_weights3D,
