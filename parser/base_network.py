@@ -272,7 +272,7 @@ class BaseNetwork(object):
                     aux_batch = next(aux_iter, None)
                   #print ("### Train on one batch of auxset ###")
                   aux_outputs.restart_timer()
-                  feed_dict = trainset.set_placeholders(aux_batch)
+                  feed_dict = auxset.set_placeholders(aux_batch)
                   _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
                   aux_outputs.update_history(aux_scores)
 
@@ -400,7 +400,7 @@ class BaseNetwork(object):
                       aux_batch = next(aux_iter, None)
                     #print ("### Train on one batch of auxset ###")
                     aux_outputs.restart_timer()
-                    feed_dict = trainset.set_placeholders(aux_batch)
+                    feed_dict = auxset.set_placeholders(aux_batch)
                     _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
                     aux_outputs.update_history(aux_scores)
                   current_gpu_idx = (current_gpu_idx + 1) % len(gpus)
@@ -431,7 +431,7 @@ class BaseNetwork(object):
                     aux_batch = next(aux_iter, None)
                   #print ("### Train on one batch of auxset ###")
                   aux_outputs.restart_timer()
-                  feed_dict = trainset.set_placeholders(aux_batch)
+                  feed_dict = auxset.set_placeholders(aux_batch)
                   _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
                   aux_outputs.update_history(aux_scores)
 
