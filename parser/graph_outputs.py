@@ -250,7 +250,7 @@ class GraphOutputs(object):
     # mask by length
     for i, (sem_preds, length) in enumerate(zip(semhead_preds, lengths)):
       masked_semhead_preds[i,:length,:length] = sem_preds[:length,:length]
-    n_counts = {'no_root':0, 'multi_root':0, 'no_head':0, 'self_circle':0}
+    n_counts = {'no_root':0, 'multi_root':0, 'no_head':0, 'self_circle':0, 'other_head_of_root':0}
     # for each sentence
     #for i in range(len(masked_semhead_preds)):
     for i, length in enumerate(lengths):
@@ -260,11 +260,18 @@ class GraphOutputs(object):
           n_counts['self_circle'] += 1
           masked_semhead_preds[i,j,j] = 0
           #print ('new graph:\n',masked_semhead_preds[i])
+        if masked_semhead_preds[i,j,0] == 1 and masked_semhead_preds[i,j,:].sum() > 1:
+          n_counts['other_head_of_root'] += 1
+          masked_semhead_preds[i,j,:] = 0
+          masked_semhead_preds[i,j,0] = 1
+
       n_root = np.sum(masked_semhead_preds[i,:,0])
       if n_root == 0:
         #print ('root:', n_root, '\n',masked_semhead_preds[i])
         n_counts['no_root'] += 1
         new_root = np.argmax(semhead_probs[i,1:,0]) + 1
+        # first remove the original head
+        masked_semhead_preds[i,new_root,:] = 0
         masked_semhead_preds[i,new_root,0] = 1
         #print ('new graph:\n', masked_semhead_preds[i])
       elif n_root > 1:
