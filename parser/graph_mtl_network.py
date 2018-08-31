@@ -124,6 +124,10 @@ class GraphMTLNetwork(BaseNetwork):
             token_weights=token_weights3D,
             reuse=reuse)
         outputs['semgraph'] = labeled_outputs
+        if self.target_nonlocal_token_rate > 0:
+          print ('target_nonlocal_token_rate:', self.target_nonlocal_token_rate)
+          print ('nonlocal_loss_rate:', self.nonlocal_loss_rate)
+          outputs['semgraph']['loss'] += self.nonlocal_loss_rate * tf.nn.l2_loss(unlabeled_outputs['n_tokens']*self.target_nonlocal_token_rate-unlabeled_outputs['n_nonlocal_tokens'])
         self._evals.add('semgraph')
       # auxiliary dataset
       with tf.variable_scope('Auxiliary'):
@@ -137,6 +141,9 @@ class GraphMTLNetwork(BaseNetwork):
         outputs['auxhead'] = unlabeled_copy
       else:
         outputs['auxhead'] = aux_outputs
+      if 'auxhead' in outputs and self.aux_nonlocal_token_rate > 0:
+        print ('aux_nonlocal_token_rate:', self.aux_nonlocal_token_rate)
+        outputs['auxhead']['loss'] += self.nonlocal_loss_rate * tf.nn.l2_loss(outputs['auxhead']['n_tokens']*self.aux_nonlocal_token_rate-outputs['auxhead']['n_nonlocal_tokens'])
     
     return outputs, tokens
   
@@ -156,7 +163,12 @@ class GraphMTLNetwork(BaseNetwork):
     'n_true_positives': outputs['n_true_positives'],
     'n_false_positives': outputs['n_false_positives'],
     'n_false_negatives': outputs['n_false_negatives'],
-    'n_correct_sequences': outputs['n_correct_sequences']
+    'n_correct_sequences': outputs['n_correct_sequences'],
+
+    'n_nonlocal_tokens': outputs['n_nonlocal_tokens'],
+    'n_nonlocal_arcs': outputs['n_nonlocal_arcs'],
+    'n_predictions': outputs['n_predictions'],
+    'n_tokens': outputs['n_tokens']
     }
     return copy
 
@@ -171,4 +183,13 @@ class GraphMTLNetwork(BaseNetwork):
   @property
   def aux_hidden_size(self):
     return self._config.getint(self, 'aux_hidden_size')
+  @property
+  def nonlocal_loss_rate(self):
+    return self._config.getfloat(self, 'nonlocal_loss_rate')
+  @property
+  def target_nonlocal_token_rate(self):
+    return self._config.getfloat(self, 'target_nonlocal_token_rate')
+  @property
+  def aux_nonlocal_token_rate(self):
+    return self._config.getfloat(self, 'aux_nonlocal_token_rate')
     

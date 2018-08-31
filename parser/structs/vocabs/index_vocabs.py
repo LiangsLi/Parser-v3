@@ -434,6 +434,16 @@ class GraphIndexVocab(IndexVocab):
         # (n) x 2 -> ()
         n_correct_sequences = tf.reduce_sum(nn.equal(n_true_positives_per_sequence, n_targets_per_sequence))
     
+        #-----------------------------------------------------------
+        # Compute Numbers of Multi-head Tokens/Arcs
+        # (n x m x m) -> (n x m)
+        predictions_bytoken = tf.to_float(tf.reduce_sum(predictions, axis=-1))
+        # (n x m) -> (n x m)
+        non_locals = nn.greater(predictions_bytoken, 1, dtype=tf.float32)
+        # (n x m) -> ()
+        n_nonlocal_tokens = tf.reduce_sum(non_locals)
+        n_nonlocal_arcs = tf.reduce_sum(predictions_bytoken * non_locals)
+
     #-----------------------------------------------------------
     # Populate the output dictionary
     outputs = {}
@@ -452,6 +462,11 @@ class GraphIndexVocab(IndexVocab):
     outputs['n_false_positives'] = n_false_positives
     outputs['n_false_negatives'] = n_false_negatives
     outputs['n_correct_sequences'] = n_correct_sequences
+
+    outputs['n_nonlocal_tokens'] = n_nonlocal_tokens
+    outputs['n_nonlocal_arcs'] = n_nonlocal_arcs
+    outputs['n_predictions'] = n_predictions
+    outputs['n_tokens'] = n_tokens
     return outputs
   
   #=============================================================
