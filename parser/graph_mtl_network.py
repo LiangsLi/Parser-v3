@@ -128,6 +128,7 @@ class GraphMTLNetwork(BaseNetwork):
           print ('target_nonlocal_token_rate:', self.target_nonlocal_token_rate)
           print ('nonlocal_loss_rate:', self.nonlocal_loss_rate)
           outputs['semgraph']['loss'] += self.nonlocal_loss_rate * tf.nn.l2_loss(unlabeled_outputs['n_tokens']*self.target_nonlocal_token_rate-unlabeled_outputs['n_nonlocal_tokens'])
+          outputs['semgraph']['n_nonlocal_tokens'] = unlabeled_outputs['n_nonlocal_tokens']
         self._evals.add('semgraph')
       # auxiliary dataset
       with tf.variable_scope('Auxiliary'):

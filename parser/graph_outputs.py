@@ -93,6 +93,8 @@ class GraphOutputs(object):
                   'bats/sec': []}
         }
       for field in self._accuracies:
+        if 'n_nonlocal_tokens' in self._accuracies[field]:
+          self.history['nonlocal'] = {'n_nonlocal_tokens': 0}
         if field == 'semgraph':
           for string in ('head', 'graph'):
             self.history['sem'+string] = {
@@ -419,6 +421,8 @@ class GraphOutputs(object):
     self.history['total']['n_tokens'] += outputs['total']['n_tokens']
     self.history['total']['n_sequences'] += outputs['total']['n_sequences']
     for field, output in six.iteritems(outputs):
+      if 'n_nonlocal_tokens' in output:
+        self.history['nonlocal']['n_nonlocal_tokens'] += output['n_nonlocal_tokens']
       if field == 'semgraph':
         if self._factored_semgraph:
           self.history['semrel']['loss'][-1] += output['label_loss']
@@ -466,10 +470,12 @@ class GraphOutputs(object):
     n_tokens = self.history['total']['n_tokens']
     n_sequences = self.history['total']['n_sequences']
     total_time = self.history['total']['total_time']
+    n_nonlocal_tokens = self.history['nonlocal']['n_nonlocal_tokens']
     self.history['total']['n_batches'] = 0
     self.history['total']['n_tokens'] = 0
     self.history['total']['n_sequences'] = 0
     self.history['total']['total_time'] = 0
+    self.history['nonlocal']['n_nonlocal_tokens'] = 0
     
     #-----------------------------------------------------------
     if stdscr is not None:
@@ -548,6 +554,7 @@ class GraphOutputs(object):
       print('Toks: {:6d}'.format(n_tokens), end='')
       print(' | ', end='')
       print('Seqs: {:5d}\n'.format(n_sequences), end='')
+      print('Non-Local Rate | {:.2f}% ({}/{})'.format(n_nonlocal_tokens/float(n_tokens)*100,int(n_nonlocal_tokens), n_tokens))
     filename = os.path.join(self.save_dir, '{}.pkl'.format(self.dataset))
     with open(filename, 'wb') as f:
       pkl.dump(self.history, f, protocol=pkl.HIGHEST_PROTOCOL)
