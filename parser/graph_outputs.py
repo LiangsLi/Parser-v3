@@ -529,15 +529,15 @@ class GraphOutputs(object):
           if field == 'semhead':
             print('{:5}'.format('PR'), end='')
             print(' | ', end='')
-            print('UP: {:5.2f}'.format(precision), end='')
+            print('UP: {:5.2f}'.format(precision*100), end='')
             print(' | ', end='')
-            print('UR: {:5.2f}\n'.format(recall), end='')
+            print('UR: {:5.2f}\n'.format(recall*100), end='')
           elif field == 'semgraph':
             print('{:5}'.format('PR'), end='')
             print(' | ', end='')
-            print('LP: {:5.2f}'.format(precision), end='')
+            print('LP: {:5.2f}'.format(precision*100), end='')
             print(' | ', end='')
-            print('LR: {:5.2f}\n'.format(recall), end='')
+            print('LR: {:5.2f}\n'.format(recall*100), end='')
         for key, value in six.iteritems(self.history[field]):
           if hasattr(value, 'append'):
             value.append(0)
