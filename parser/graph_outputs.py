@@ -370,6 +370,13 @@ class GraphOutputs(object):
     precision = self.history[field]['tokens'][-1] / (self.history[field]['tokens'][-1] + self.history[field]['fp_tokens'] + 1e-12)
     recall = self.history[field]['tokens'][-1] / (self.history[field]['tokens'][-1] + self.history[field]['fn_tokens'] + 1e-12)
     return 2 * (precision * recall) / (precision + recall + 1e-12)
+
+  def compute_token_prf(self, field):
+    """"""
+    
+    precision = self.history[field]['tokens'][-1] / (self.history[field]['tokens'][-1] + self.history[field]['fp_tokens'] + 1e-12)
+    recall = self.history[field]['tokens'][-1] / (self.history[field]['tokens'][-1] + self.history[field]['fn_tokens'] + 1e-12)
+    return 2 * (precision * recall) / (precision + recall + 1e-12), precision, recall
   
   def compute_sequence_accuracy(self, field):
     """"""
@@ -489,7 +496,8 @@ class GraphOutputs(object):
         tokens = self.history[field]['tokens'][-1]
         if field in ('semgraph', 'semhead'):
           tp = self.history[field]['tokens'][-1]
-          self.history[field]['tokens'][-1] = self.compute_token_F1(field) * 100
+          self.history[field]['tokens'][-1], precision, recall = self.compute_token_prf(field)
+          self.history[field]['tokens'][-1] *= 100
         elif field == 'semrel':
           n_edges = self.history[field]['n_edges']
           self.history[field]['tokens'][-1] *= 100 / n_edges
@@ -518,6 +526,18 @@ class GraphOutputs(object):
           print('Acc: {:5.2f}'.format(acc), end='')
           print(' | ', end='')
           print('Seq: {:5.2f}\n'.format(acc_seq), end='')
+          if field == 'semhead':
+            print('{:5}'.format('PR'), end='')
+            print(' | ', end='')
+            print('UP: {:5.2f}'.format(precision), end='')
+            print(' | ', end='')
+            print('UR: {:5.2f}\n'.format(recall), end='')
+          elif field == 'semgraph':
+            print('{:5}'.format('PR'), end='')
+            print(' | ', end='')
+            print('LP: {:5.2f}'.format(precision), end='')
+            print(' | ', end='')
+            print('LR: {:5.2f}\n'.format(recall), end='')
         for key, value in six.iteritems(self.history[field]):
           if hasattr(value, 'append'):
             value.append(0)
