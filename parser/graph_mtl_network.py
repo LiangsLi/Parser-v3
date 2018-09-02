@@ -131,10 +131,10 @@ class GraphMTLNetwork(BaseNetwork):
           #outputs['semgraph']['n_nonlocal_tokens'] = unlabeled_outputs['n_nonlocal_tokens']
         if self.fp_rate > 0:
           print ('### False Posivitve Rate: {} ###'.format(self.fp_rate))
-          outputs['semgraph']['loss'] += self.fp_rate * tf.to_float(unlabeled_outputs['n_false_positives'])
+          outputs['semgraph']['loss'] += self.fp_rate * tf.to_float(unlabeled_outputs['n_false_positives']) / tf.to_float(n_tokens)
         if self.fn_rate > 0:
           print ('### False Negative Rate: {} ###'.format(self.fn_rate))
-          outputs['semgraph']['loss'] += self.fn_rate * tf.to_float(unlabeled_outputs['n_false_negatives'])
+          outputs['semgraph']['loss'] += self.fn_rate * tf.to_float(unlabeled_outputs['n_false_negatives']) / tf.to_float(n_tokens)
         self._evals.add('semgraph')
       # auxiliary dataset
       with tf.variable_scope('Auxiliary'):
@@ -154,10 +154,10 @@ class GraphMTLNetwork(BaseNetwork):
           outputs['auxhead']['loss'] += self.nonlocal_loss_rate * tf.nn.l2_loss(outputs['auxhead']['n_tokens']*self.aux_nonlocal_token_rate-outputs['auxhead']['n_nonlocal_tokens'])
         if self.fp_rate > 0:
           print ('### False Posivitve Rate: {} ###'.format(self.fp_rate))
-          outputs['auxhead']['loss'] += self.fp_rate * tf.to_float(outputs['auxhead']['n_false_positives'])
+          outputs['auxhead']['loss'] += self.fp_rate * tf.to_float(outputs['auxhead']['n_false_positives']) / tf.to_float(n_tokens)
         if self.fn_rate > 0:
           print ('### False Negative Rate: {} ###'.format(self.fn_rate))
-          outputs['auxhead']['loss'] += self.fn_rate * tf.to_float(outputs['auxhead']['n_false_negatives'])
+          outputs['auxhead']['loss'] += self.fn_rate * tf.to_float(outputs['auxhead']['n_false_negatives']) / tf.to_float(n_tokens)
 
     return outputs, tokens
   
