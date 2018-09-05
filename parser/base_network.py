@@ -151,6 +151,8 @@ class BaseNetwork(object):
         aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
         aux_graph.append(train_graph[1])
         aux_outputs = AuxOutputs(*aux_graph, load=load, evals=self._evals, factored_deptree=False, factored_semgraph=False, config=self._config)
+      elif 'auxhead' in  train_graph[0]:
+        train_graph[0].pop('auxhead')
       train_outputs = TrainOutputs(*train_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
     with tf.variable_scope(self.classname, reuse=True):
       #with tf.device('/gpu:0'):
