@@ -405,8 +405,13 @@ class GraphIndexVocab(IndexVocab):
         # Compute probabilities/cross entropy
         # (n x m x m) -> (n x m x m)
         probabilities = tf.nn.sigmoid(logits) * tf.to_float(token_weights)
+        fp_cost = np.maximum(.0, self.fp_cost)
+        fn_cost = np.maximum(.0, self.fn_cost)
+        if fp_cost + fn_cost > 0:
+          print ("### In SemheadGraphIndexVocab : FP cost: {}, FN cost: {} ###".format(fp_cost, fn_cost))
         # (n x m x m), (n x m x m), (n x m x m) -> ()
-        loss = tf.losses.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights)
+        #loss = tf.losses.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights)
+        loss = classifiers.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights, fp_cost=fp_cost, fn_cost=fn_cost)
         n_tokens = tf.to_float(tf.reduce_sum(token_weights))
         if self.linearize:
           lin_target_xent = lin_xent * unlabeled_targets
@@ -495,6 +500,14 @@ class GraphIndexVocab(IndexVocab):
     
     return '_'
   
+  #=============================================================
+  @property
+  def fp_cost(self):
+    return self._config.getfloat(self, 'fp_cost')
+  @property
+  def fn_cost(self):
+    return self._config.getfloat(self, 'fn_cost')
+
   #=============================================================
   def __getitem__(self, key):
     if isinstance(key, six.string_types):
