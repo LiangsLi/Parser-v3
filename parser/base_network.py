@@ -521,7 +521,7 @@ class BaseNetwork(object):
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       if len(conllu_files) == 1 or output_filename is not None:
         with Timer('Parsing file'):
-          if self.other_save_dirs is None:
+          if not self.other_save_dirs:
             self.parse_file(parseset, parse_outputs, sess, output_dir=output_dir, output_filename=output_filename)
           else:
             self.parse_file_ensemble(parseset, parse_outputs, sess, saver, output_dir=output_dir, output_filename=output_filename)
@@ -535,16 +535,21 @@ class BaseNetwork(object):
     """"""
 
     probability_tensors = graph_outputs.probabilities
+    score_tensors = graph_outputs.accuracies
     input_filename = dataset.conllu_files[0]
-    graph_outputs.restart_timer()
+    #graph_outputs.restart_timer()
+    start_time = time.time()
     for i, indices in enumerate(dataset.batch_iterator(shuffle=False)):
       with Timer('Parsing batch %d' % i):
+        graph_outputs.restart_timer()
         tokens, lengths = dataset.get_tokens(indices)
         feed_dict = dataset.set_placeholders(indices)
-        probabilities = sess.run(probability_tensors, feed_dict=feed_dict)
+        scores, probabilities = sess.run([score_tensors, probability_tensors], feed_dict=feed_dict)
         predictions = graph_outputs.probs_to_preds(probabilities, lengths)
         tokens.update({vocab.field: vocab[predictions[vocab.field]] for vocab in self.output_vocabs})
         graph_outputs.cache_predictions(tokens, indices)
+        graph_outputs.update_history(scores)
+    graph_outputs.print_recent_history()
 
     with Timer('Dumping predictions'):
       if output_dir is None and output_filename is None:
@@ -562,7 +567,8 @@ class BaseNetwork(object):
         with codecs.open(output_filename, 'w', encoding='utf-8') as f:
           graph_outputs.dump_current_predictions(f)
     if print_time:
-      print('\033[92mParsing 1 file took {:0.1f} seconds\033[0m'.format(time.time() - graph_outputs.time))
+      #print('\033[92mParsing 1 file took {:0.1f} seconds\033[0m'.format(time.time() - graph_outputs.time))
+      print('\033[92mParsing 1 file took {:0.1f} seconds\033[0m'.format(time.time() - start_time))
     return
 
   #=============================================================
@@ -592,7 +598,7 @@ class BaseNetwork(object):
             collect['probs'][field] += probabilities[field]
 
     for i, collect in enumerate(collects):
-      with Timer('Parsing batch %d' % i):
+      with Timer('Merging batch %d' % i):
         predictions = graph_outputs.probs_to_preds(collect['probs'], collect['lengths'])
         collect['tokens'].update({vocab.field: vocab[predictions[vocab.field]] for vocab in self.output_vocabs})
         graph_outputs.cache_predictions(collect['tokens'], collect['indices'])
