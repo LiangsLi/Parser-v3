@@ -409,9 +409,11 @@ class GraphIndexVocab(IndexVocab):
         fn_cost = np.maximum(.0, self.fn_cost)
         if fp_cost + fn_cost > 0:
           print ("### In SemheadGraphIndexVocab : FP cost: {}, FN cost: {} ###".format(fp_cost, fn_cost))
-        # (n x m x m), (n x m x m), (n x m x m) -> ()
-        #loss = tf.losses.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights)
-        loss = classifiers.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights, fp_cost=fp_cost, fn_cost=fn_cost)
+          # (n x m x m), (n x m x m), (n x m x m) -> () 
+          loss = classifiers.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights, fp_cost=fp_cost, fn_cost=fn_cost)
+        else:
+          print ("### Using Tensorflow sigmoid cross entropy ###")
+          loss = tf.losses.sigmoid_cross_entropy(unlabeled_targets, logits, weights=token_weights)
         n_tokens = tf.to_float(tf.reduce_sum(token_weights))
         if self.linearize:
           lin_target_xent = lin_xent * unlabeled_targets
