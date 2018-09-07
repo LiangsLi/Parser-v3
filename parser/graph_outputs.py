@@ -146,7 +146,9 @@ class GraphOutputs(object):
     """"""
     
     predictions = {}
-    
+    drop_arc = self.drop_arc if self.drop_arc > 0 else .5
+    #print ("### Keeping arcs with prob >= {:.2f} ###".format(self.drop_arc if self.drop_arc > 0 else .5))
+
     if 'form' in probabilities:
       form_probs = probabilities['form']
       if isinstance(form_probs, (tuple, list)):
@@ -223,7 +225,7 @@ class GraphOutputs(object):
         # (n x m x m x c) -> (n x m x m)
         semhead_probs = semgraph_probs.sum(axis=-1)
         # (n x m x m) -> (n x m x m)
-        semhead_preds = np.where(semhead_probs >= .5, 1, 0)
+        semhead_preds = np.where(semhead_probs >= drop_arc, 1, 0)
         # (n x m x m x c) -> (n x m x m)
         semrel_preds = np.argmax(semgraph_probs, axis=-1)
         # (n x m x m) (*) (n x m x m) -> (n x m x m)
@@ -243,10 +245,12 @@ class GraphOutputs(object):
     return predictions
   
   def sem16decoder(self, semgraph_probs, lengths):
+    drop_arc = self.drop_arc if self.drop_arc > 0 else .5
+    #print ("### Keeping arcs with prob >= {:.2f} ###".format(self.drop_arc if self.drop_arc > 0 else .5))
     # (n x m x m x c) -> (n x m x m)
     semhead_probs = semgraph_probs.sum(axis=-1)
     # (n x m x m) -> (n x m x m)
-    semhead_preds = np.where(semhead_probs >= .5, 1, 0)
+    semhead_preds = np.where(semhead_probs >= drop_arc, 1, 0)
     # (n x m x m)
     masked_semhead_preds = np.zeros(semhead_preds.shape, dtype=np.int32)
     # mask by length
@@ -602,6 +606,9 @@ class GraphOutputs(object):
   @property
   def decoder(self):
     return self._config.getstr(self, 'decoder')
+  @property
+  def drop_arc(self):
+    return self._config.getfloat(self, 'drop_arc')
 
 #***************************************************************
 class TrainOutputs(GraphOutputs):
