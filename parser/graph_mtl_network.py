@@ -147,7 +147,7 @@ class GraphMTLNetwork(BaseNetwork):
       # auxiliary dataset
       aux_vocab = output_fields['semhead']
       rel_vocab = output_fields['semrel']
-      print ("### aux dataset ###")
+      #print ("### aux dataset ###")
       # unlabeled mlp
       if self.share_arc_mlp:
         with tf.variable_scope('Unlabeled', reuse=True):
@@ -190,13 +190,13 @@ class GraphMTLNetwork(BaseNetwork):
         if self.share_rel_biaffine:
           with tf.variable_scope('Labeled', reuse=True):
             aux_labeled_outputs = rel_vocab.get_bilinear_classifier(
-                aux_labeled_layers, unlabeled_outputs,
+                aux_labeled_layers, aux_unlabeled_outputs,
                 token_weights=token_weights3D,
                 reuse=reuse)
         else:
           with tf.variable_scope('Labeled-Aux'):
             aux_labeled_outputs = rel_vocab.get_bilinear_classifier(
-                aux_labeled_layers, unlabeled_outputs,
+                aux_labeled_layers, aux_unlabeled_outputs,
                 token_weights=token_weights3D,
                 reuse=reuse)
         outputs['auxhead'] = aux_labeled_outputs
