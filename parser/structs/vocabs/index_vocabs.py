@@ -302,12 +302,12 @@ class GraphIndexVocab(IndexVocab):
     kwargs['placeholder_shape'] = [None, None, None]
     super(GraphIndexVocab, self).__init__(*args, **kwargs)
     return
-  
+
   #=============================================================
-  def get_bilinear_discriminator(self, layer, token_weights, variable_scope=None, reuse=False, hidden_size=None):
+  def get_hidden(self, layer, variable_scope=None, reuse=False, hidden_size=None):
     """"""
     
-    recur_layer = layer
+    #recur_layer = layer
     hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
     add_linear = self.add_linear
     n_splits = 2*(1+self.linearize+self.distance)
@@ -322,6 +322,34 @@ class GraphIndexVocab(IndexVocab):
         layers = classifiers.hiddens(layer, n_splits*[hidden_size],
                                      hidden_func=self.hidden_func,
                                      hidden_keep_prob=hidden_keep_prob)
+    return layers
+
+  #=============================================================
+  def get_bilinear_discriminator(self, layers, token_weights, variable_scope=None, reuse=False, hidden_size=None):
+    """"""
+
+    #recur_layer = layer
+    hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
+    add_linear = self.add_linear
+
+    if isinstance(layers, tf.Tensor):
+      layer = layers
+      n_splits = 2*(1+self.linearize+self.distance)
+      hidden_size = hidden_size or self.hidden_size
+      with tf.variable_scope(variable_scope or self.field):
+        for i in six.moves.range(0, self.n_layers-1):
+          with tf.variable_scope('FC-%d' % i):
+            layer = classifiers.hidden(layer, n_splits*hidden_size,
+                                     hidden_func=self.hidden_func,
+                                     hidden_keep_prob=hidden_keep_prob)
+        with tf.variable_scope('FC-top'):
+          layers = classifiers.hiddens(layer, n_splits*[hidden_size],
+                                     hidden_func=self.hidden_func,
+                                     hidden_keep_prob=hidden_keep_prob)
+    #else:
+      #print ("index layers")
+
+    with tf.variable_scope(variable_scope or self.field):
       layer1, layer2 = layers.pop(0), layers.pop(0)
       if self.linearize:
         lin_layer1, lin_layer2 = layers.pop(0), layers.pop(0)

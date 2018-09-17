@@ -654,10 +654,10 @@ class GraphTokenVocab(TokenVocab):
     return outputs
   
   #=============================================================
-  def get_bilinear_classifier(self, layer, outputs, token_weights, variable_scope=None, reuse=False):
+  def get_hidden(self, layer, variable_scope=None, reuse=False):
     """"""
     
-    recur_layer = layer
+    #recur_layer = layer
     hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
     add_linear = self.add_linear
     with tf.variable_scope(variable_scope or self.field):
@@ -670,8 +670,33 @@ class GraphTokenVocab(TokenVocab):
         layers = classifiers.hiddens(layer, 2*[self.hidden_size],
                                     hidden_func=self.hidden_func,
                                     hidden_keep_prob=hidden_keep_prob)
+    return layers
+
+  #=============================================================
+  def get_bilinear_classifier(self, layers, outputs, token_weights, variable_scope=None, reuse=False):
+    """"""
+    
+    #recur_layer = layer
+    hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
+    add_linear = self.add_linear
+
+    if isinstance(layers, tf.Tensor):
+      layer = layers
+      with tf.variable_scope(variable_scope or self.field):
+        for i in six.moves.range(0, self.n_layers-1):
+          with tf.variable_scope('FC-%d' % i):
+            layer = classifiers.hidden(layer, 2*self.hidden_size,
+                                      hidden_func=self.hidden_func,
+                                      hidden_keep_prob=hidden_keep_prob)
+        with tf.variable_scope('FC-top'):
+          layers = classifiers.hiddens(layer, 2*[self.hidden_size],
+                                    hidden_func=self.hidden_func,
+                                    hidden_keep_prob=hidden_keep_prob)
+    #else:
+      #print ("token layers")
+
+    with tf.variable_scope(variable_scope or self.field):
       layer1, layer2 = layers.pop(0), layers.pop(0)
-      
       with tf.variable_scope('Classifier'):
         if self.diagonal:
           logits = classifiers.diagonal_bilinear_classifier(
