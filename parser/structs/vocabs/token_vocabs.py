@@ -654,20 +654,27 @@ class GraphTokenVocab(TokenVocab):
     return outputs
   
   #=============================================================
-  def get_hidden(self, layer, variable_scope=None, reuse=False):
+  def get_hidden(self, layer, variable_scope=None, reuse=False, hidden_size=None, share=None,
+                  task_emb_size=None, task_scope=None):
     """"""
     
+    if task_emb_size is not None and task_scope is not None:
+      layer_shape = nn.get_sizes(layer)
+      with tf.variable_scope(task_scope, reuse=True):
+        task_embed = tf.get_variable('TaskEmbed', shape=[task_emb_size], initializer=tf.zeros_initializer)
+        #print (task_embed.name)
     #recur_layer = layer
     hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
     add_linear = self.add_linear
-    with tf.variable_scope(variable_scope or self.field):
+    hidden_size = hidden_size or self.hidden_size
+    with tf.variable_scope(variable_scope or self.field, reuse=share):
       for i in six.moves.range(0, self.n_layers-1):
         with tf.variable_scope('FC-%d' % i):
-          layer = classifiers.hidden(layer, 2*self.hidden_size,
+          layer = classifiers.hidden(layer, 2*hidden_size,
                                       hidden_func=self.hidden_func,
                                       hidden_keep_prob=hidden_keep_prob)
       with tf.variable_scope('FC-top'):
-        layers = classifiers.hiddens(layer, 2*[self.hidden_size],
+        layers = classifiers.hiddens(layer, 2*[hidden_size],
                                     hidden_func=self.hidden_func,
                                     hidden_keep_prob=hidden_keep_prob)
     return layers

@@ -101,6 +101,8 @@ class GraphMTLNetwork(BaseNetwork):
   
     output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
     outputs = {}
+    task_emb_size = self.task_emb_size if self.task_emb_size > 0 else None
+    #print ("\n### main dataset ###")
     with tf.variable_scope('Classifiers'):
       # target dataset
       if 'semrel' in output_fields:
@@ -108,9 +110,12 @@ class GraphMTLNetwork(BaseNetwork):
         if vocab.factorized:
           head_vocab = output_fields['semhead']
           with tf.variable_scope('Unlabeled'):
-            unlabeled_layers = head_vocab.get_hidden(
+            unlabeled_layers, task_scope = head_vocab.get_hidden(
               layer,
-              reuse=reuse)
+              reuse=reuse,
+              task_emb_size=task_emb_size,
+              task_scope='Maintask')
+            #print (task_scope)
             unlabeled_outputs = head_vocab.get_bilinear_discriminator(
               unlabeled_layers,
               token_weights=token_weights3D,
@@ -120,7 +125,9 @@ class GraphMTLNetwork(BaseNetwork):
             with tf.device('/gpu:1'):
               labeled_layers = vocab.get_hidden(
                 layer,
-                reuse=reuse)
+                reuse=reuse,
+                task_emb_size=task_emb_size,
+                task_scope=task_scope)
               labeled_outputs = vocab.get_bilinear_classifier(
                 labeled_layers, unlabeled_outputs,
                 token_weights=token_weights3D,
@@ -130,36 +137,28 @@ class GraphMTLNetwork(BaseNetwork):
             token_weights=token_weights3D,
             reuse=reuse)
         outputs['semgraph'] = labeled_outputs
-        """
-        if self.target_nonlocal_token_rate > 0:
-          print ('### Target_nonlocal_token_rate: {} ###'.format(self.target_nonlocal_token_rate))
-          print ('### Nonlocal_loss_rate: {} ###'.format(self.nonlocal_loss_rate))
-          outputs['semgraph']['loss'] += self.nonlocal_loss_rate * tf.nn.l2_loss(unlabeled_outputs['n_tokens']*self.target_nonlocal_token_rate-unlabeled_outputs['n_nonlocal_tokens'])
-          #outputs['semgraph']['n_nonlocal_tokens'] = unlabeled_outputs['n_nonlocal_tokens']
-        if self.fp_rate > 0:
-          print ('### False Posivitve Rate: {} ###'.format(self.fp_rate))
-          outputs['semgraph']['loss'] += self.fp_rate * tf.to_float(unlabeled_outputs['n_false_positives']) / tf.to_float(n_tokens)
-        if self.fn_rate > 0:
-          print ('### False Negative Rate: {} ###'.format(self.fn_rate))
-          outputs['semgraph']['loss'] += self.fn_rate * tf.to_float(unlabeled_outputs['n_false_negatives']) / tf.to_float(n_tokens)
-        """
         self._evals.add('semgraph')
       # auxiliary dataset
       aux_vocab = output_fields['semhead']
       rel_vocab = output_fields['semrel']
-      #print ("### aux dataset ###")
+      #print ("\n### aux dataset ###")
       # unlabeled mlp
       if self.share_arc_mlp:
-        with tf.variable_scope('Unlabeled', reuse=True):
-          aux_unlabeled_layers = aux_vocab.get_hidden(
-              layer,
-              reuse=reuse)
-      else:
-        with tf.variable_scope('Unlabeled-Aux'):
-          aux_unlabeled_layers = aux_vocab.get_hidden(
+        with tf.variable_scope('Unlabeled'):
+          aux_unlabeled_layers, task_scope = aux_vocab.get_hidden(
               layer,
               reuse=reuse,
-              hidden_size=self.aux_arc_hidden_size)
+              share=True,
+              task_emb_size=task_emb_size,
+              task_scope='Auxtask')
+      else:
+        with tf.variable_scope('Unlabeled-Aux'):
+          aux_unlabeled_layers, task_scope = aux_vocab.get_hidden(
+              layer,
+              reuse=reuse,
+              hidden_size=self.aux_arc_hidden_size,
+              task_emb_size=task_emb_size,
+              task_scope='Auxtask')
       # unlabeled biaffine classifier
       if self.share_arc_biaffine:
         with tf.variable_scope('Unlabeled', reuse=True):
@@ -176,16 +175,21 @@ class GraphMTLNetwork(BaseNetwork):
       if self.aux_label:
         # labeled hidden
         if self.share_rel_mlp:
-          with tf.variable_scope('Labeled', reuse=True):
+          with tf.variable_scope('Labeled'):
             aux_labeled_layers = rel_vocab.get_hidden(
                 layer,
-                reuse=reuse)
+                reuse=reuse,
+                share=True,
+                task_emb_size=task_emb_size,
+                task_scope=task_scope)
         else:
           with tf.variable_scope('Labeled-Aux'):
             aux_labeled_layers = rel_vocab.get_hidden(
                 layer,
                 reuse=reuse,
-                hidden_size=self.aux_rel_hidden_size)
+                hidden_size=self.aux_rel_hidden_size,
+                task_emb_size=task_emb_size,
+                task_scope=task_scope)
         # labeled biaffine layer
         if self.share_rel_biaffine:
           with tf.variable_scope('Labeled', reuse=True):
@@ -271,6 +275,9 @@ class GraphMTLNetwork(BaseNetwork):
   @property
   def aux_rel_hidden_size(self):
     return self._config.getint(self, 'aux_rel_hidden_size')
+  @property
+  def task_emb_size(self):
+    return self._config.getint(self, 'task_emb_size')
   """
   @property
   def nonlocal_loss_rate(self):
