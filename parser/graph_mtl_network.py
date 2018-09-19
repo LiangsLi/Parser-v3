@@ -115,7 +115,7 @@ class GraphMTLNetwork(BaseNetwork):
               unlabeled_layers,
               token_weights=token_weights3D,
               reuse=reuse)
-            unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
+            #unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
           with tf.variable_scope('Labeled'):
             with tf.device('/gpu:1'):
               labeled_layers = vocab.get_hidden(
@@ -158,22 +158,21 @@ class GraphMTLNetwork(BaseNetwork):
         with tf.variable_scope('Unlabeled-Aux'):
           aux_unlabeled_layers = aux_vocab.get_hidden(
               layer,
-              reuse=reuse)
+              reuse=reuse,
+              hidden_size=self.aux_arc_hidden_size)
       # unlabeled biaffine classifier
       if self.share_arc_biaffine:
         with tf.variable_scope('Unlabeled', reuse=True):
           aux_unlabeled_outputs = aux_vocab.get_bilinear_discriminator(
               aux_unlabeled_layers,
               token_weights=token_weights3D,
-              reuse=reuse,
-              hidden_size=self.aux_hidden_size)
+              reuse=reuse)
       else:
         with tf.variable_scope('Unlabeled-Aux'):
           aux_unlabeled_outputs = aux_vocab.get_bilinear_discriminator(
               aux_unlabeled_layers,
               token_weights=token_weights3D,
-              reuse=reuse,
-              hidden_size=self.aux_hidden_size)
+              reuse=reuse)
       if self.aux_label:
         # labeled hidden
         if self.share_rel_mlp:
@@ -185,7 +184,8 @@ class GraphMTLNetwork(BaseNetwork):
           with tf.variable_scope('Labeled-Aux'):
             aux_labeled_layers = rel_vocab.get_hidden(
                 layer,
-                reuse=reuse)
+                reuse=reuse,
+                hidden_size=self.aux_rel_hidden_size)
         # labeled biaffine layer
         if self.share_rel_biaffine:
           with tf.variable_scope('Labeled', reuse=True):
@@ -266,8 +266,12 @@ class GraphMTLNetwork(BaseNetwork):
   def share_rel_biaffine(self):
     return self._config.getboolean(self, 'share_rel_biaffine')
   @property
-  def aux_hidden_size(self):
-    return self._config.getint(self, 'aux_hidden_size')
+  def aux_arc_hidden_size(self):
+    return self._config.getint(self, 'aux_arc_hidden_size')
+  @property
+  def aux_rel_hidden_size(self):
+    return self._config.getint(self, 'aux_rel_hidden_size')
+  """
   @property
   def nonlocal_loss_rate(self):
     return self._config.getfloat(self, 'nonlocal_loss_rate')
@@ -283,4 +287,5 @@ class GraphMTLNetwork(BaseNetwork):
   @property
   def fn_rate(self):
     return self._config.getfloat(self, 'fn_rate')
+  """
     

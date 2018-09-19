@@ -374,45 +374,12 @@ class BaseNetwork(object):
             for batch in trainset.batch_iterator(shuffle=True):
               #print ("### Train on one batch of trainset ###")
 
-              # spliting batches to different GPU
-              if len(gpus) > 0:
-                train_outputs.restart_timer()
-                start_time = time.time()
-                feed_dict = trainset.set_placeholders(batch)
-                #---
-                #with tf.device('/gpu:%d' % current_gpu_idx):
-                with tf.device('/gpu:0'):
-                  if current_step < 10:
-                    _, train_scores = sess.run(train_tensors, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
-                    fetched_timeline = timeline.Timeline(run_metadata.step_stats)
-                    chrome_trace = fetched_timeline.generate_chrome_trace_format()
-                    with open(os.path.join(self.save_dir, 'profile', 'timeline_step_%d.json' % current_step), 'w') as f:
-                      f.write(chrome_trace)
-                  else:
-                    _, train_scores = sess.run(train_tensors, feed_dict=feed_dict)
-                  #---
-                  train_outputs.update_history(train_scores)
-
-                  # run a auxiliary set batch
-                  if use_aux:
-                    aux_batch = next(aux_iter, None)
-                    if aux_batch is None:
-                      #print ("### Reload auxset batches ###")
-                      aux_iter = auxset.batch_iterator(shuffle=True)
-                      aux_batch = next(aux_iter, None)
-                    #print ("### Train on one batch of auxset ###")
-                    aux_outputs.restart_timer()
-                    feed_dict = auxset.set_placeholders(aux_batch)
-                    _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
-                    aux_outputs.update_history(aux_scores)
-                  current_gpu_idx = (current_gpu_idx + 1) % len(gpus)
-
-              # using CPU
-              else:
-                train_outputs.restart_timer()
-                start_time = time.time()
-                feed_dict = trainset.set_placeholders(batch)
-                #---
+              train_outputs.restart_timer()
+              start_time = time.time()
+              feed_dict = trainset.set_placeholders(batch)
+              #---
+              #with tf.device('/gpu:%d' % current_gpu_idx):
+              with tf.device('/gpu:0'):
                 if current_step < 10:
                   _, train_scores = sess.run(train_tensors, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
                   fetched_timeline = timeline.Timeline(run_metadata.step_stats)
@@ -436,6 +403,7 @@ class BaseNetwork(object):
                   feed_dict = auxset.set_placeholders(aux_batch)
                   _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
                   aux_outputs.update_history(aux_scores)
+                current_gpu_idx = (current_gpu_idx + 1) % len(gpus)
 
               current_step += 1
               if current_step % self.print_every == 0:
