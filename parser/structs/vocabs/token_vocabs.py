@@ -663,6 +663,8 @@ class GraphTokenVocab(TokenVocab):
       with tf.variable_scope(task_scope, reuse=True):
         task_embed = tf.get_variable('TaskEmbed', shape=[task_emb_size], initializer=tf.zeros_initializer)
         #print (task_embed.name)
+        task_matrix = tf.tile([[task_embed]], layer_shape[:-1] + [1])
+        layer = tf.concat([layer, task_matrix], -1)
     #recur_layer = layer
     hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
     add_linear = self.add_linear
