@@ -37,7 +37,7 @@ class GraphMTLNetwork(BaseNetwork):
   """"""
   
   #=============================================================
-  def build_graph(self, input_network_outputs={}, reuse=True):
+  def build_graph(self, input_network_outputs={}, reuse=True, n_aux = 0):
     """"""
     
     with tf.variable_scope('Embeddings'):
@@ -102,7 +102,7 @@ class GraphMTLNetwork(BaseNetwork):
     output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
     outputs = {}
     task_emb_size = self.task_emb_size if self.task_emb_size > 0 else None
-    #print ("\n### main dataset ###")
+    print ("\n### main dataset ###")
     with tf.variable_scope('Classifiers'):
       # target dataset
       if 'semrel' in output_fields:
@@ -110,25 +110,25 @@ class GraphMTLNetwork(BaseNetwork):
         if vocab.factorized:
           head_vocab = output_fields['semhead']
           with tf.variable_scope('Unlabeled'):
-            unlabeled_layers, task_scope = head_vocab.get_hidden(
+            unlabeled_layers, task_scope, unlabeled_hidden_scope = head_vocab.get_hidden(
               layer,
               reuse=reuse,
               task_emb_size=task_emb_size,
               task_scope='Maintask')
             #print (task_scope)
-            unlabeled_outputs = head_vocab.get_bilinear_discriminator(
+            unlabeled_outputs, unlabeled_bilinear_scope = head_vocab.get_bilinear_discriminator(
               unlabeled_layers,
               token_weights=token_weights3D,
               reuse=reuse)
             #unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
           with tf.variable_scope('Labeled'):
             with tf.device('/gpu:1'):
-              labeled_layers = vocab.get_hidden(
+              labeled_layers, labeled_hidden_scope = vocab.get_hidden(
                 layer,
                 reuse=reuse,
                 task_emb_size=task_emb_size,
                 task_scope=task_scope)
-              labeled_outputs = vocab.get_bilinear_classifier(
+              labeled_outputs, labeled_bilinear_scope = vocab.get_bilinear_classifier(
                 labeled_layers, unlabeled_outputs,
                 token_weights=token_weights3D,
                 reuse=reuse)
@@ -141,71 +141,79 @@ class GraphMTLNetwork(BaseNetwork):
       # auxiliary dataset
       aux_vocab = output_fields['semhead']
       rel_vocab = output_fields['semrel']
-      #print ("\n### aux dataset ###")
       # unlabeled mlp
-      if self.share_arc_mlp:
-        with tf.variable_scope('Unlabeled'):
-          aux_unlabeled_layers, task_scope = aux_vocab.get_hidden(
-              layer,
-              reuse=reuse,
-              share=True,
-              task_emb_size=task_emb_size,
-              task_scope='Auxtask')
-      else:
-        with tf.variable_scope('Unlabeled-Aux'):
-          aux_unlabeled_layers, task_scope = aux_vocab.get_hidden(
-              layer,
-              reuse=reuse,
-              hidden_size=self.aux_arc_hidden_size,
-              task_emb_size=task_emb_size,
-              task_scope='Auxtask')
-      # unlabeled biaffine classifier
-      if self.share_arc_biaffine:
-        with tf.variable_scope('Unlabeled', reuse=True):
-          aux_unlabeled_outputs = aux_vocab.get_bilinear_discriminator(
-              aux_unlabeled_layers,
-              token_weights=token_weights3D,
-              reuse=reuse)
-      else:
-        with tf.variable_scope('Unlabeled-Aux'):
-          aux_unlabeled_outputs = aux_vocab.get_bilinear_discriminator(
-              aux_unlabeled_layers,
-              token_weights=token_weights3D,
-              reuse=reuse)
-      if self.aux_label:
-        # labeled hidden
-        if self.share_rel_mlp:
-          with tf.variable_scope('Labeled'):
-            aux_labeled_layers = rel_vocab.get_hidden(
-                layer,
-                reuse=reuse,
-                share=True,
-                task_emb_size=task_emb_size,
-                task_scope=task_scope)
-        else:
-          with tf.variable_scope('Labeled-Aux'):
-            aux_labeled_layers = rel_vocab.get_hidden(
-                layer,
-                reuse=reuse,
-                hidden_size=self.aux_rel_hidden_size,
-                task_emb_size=task_emb_size,
-                task_scope=task_scope)
-        # labeled biaffine layer
-        if self.share_rel_biaffine:
-          with tf.variable_scope('Labeled', reuse=True):
-            aux_labeled_outputs = rel_vocab.get_bilinear_classifier(
-                aux_labeled_layers, aux_unlabeled_outputs,
-                token_weights=token_weights3D,
-                reuse=reuse)
-        else:
-          with tf.variable_scope('Labeled-Aux'):
-            aux_labeled_outputs = rel_vocab.get_bilinear_classifier(
-                aux_labeled_layers, aux_unlabeled_outputs,
-                token_weights=token_weights3D,
-                reuse=reuse)
-        outputs['auxhead'] = aux_labeled_outputs
-      else:
-        outputs['auxhead'] = aux_unlabeled_outputs
+      for n in range(n_aux):
+        print ("\n### aux dataset-%d ###" % n)
+        with tf.variable_scope('Aux-%d' % n):
+          if self.share_arc_mlp:
+            with tf.variable_scope('Unlabeled'):
+              aux_unlabeled_layers, task_scope, _ = aux_vocab.get_hidden(
+                  layer,
+                  variable_scope=unlabeled_hidden_scope,
+                  reuse=reuse,
+                  share=True,
+                  task_emb_size=task_emb_size,
+                  task_scope='Auxtask')
+          else:
+            with tf.variable_scope('Unlabeled-Aux'):
+              aux_unlabeled_layers, task_scope, _ = aux_vocab.get_hidden(
+                  layer,
+                  reuse=reuse,
+                  hidden_size=self.aux_arc_hidden_size,
+                  task_emb_size=task_emb_size,
+                  task_scope='Auxtask')
+          # unlabeled biaffine classifier
+          if self.share_arc_biaffine:
+            with tf.variable_scope('Unlabeled'):
+              aux_unlabeled_outputs, _ = aux_vocab.get_bilinear_discriminator(
+                  aux_unlabeled_layers,
+                  variable_scope=unlabeled_bilinear_scope,
+                  token_weights=token_weights3D,
+                  reuse=reuse,
+                  share=True)
+          else:
+            with tf.variable_scope('Unlabeled-Aux'):
+              aux_unlabeled_outputs, _ = aux_vocab.get_bilinear_discriminator(
+                  aux_unlabeled_layers,
+                  token_weights=token_weights3D,
+                  reuse=reuse)
+          if self.aux_label:
+            # labeled hidden
+            if self.share_rel_mlp:
+              with tf.variable_scope('Labeled'):
+                aux_labeled_layers, _ = rel_vocab.get_hidden(
+                    layer,
+                    variable_scope=labeled_hidden_scope,
+                    reuse=reuse,
+                    share=True,
+                    task_emb_size=task_emb_size,
+                    task_scope=task_scope)
+            else:
+              with tf.variable_scope('Labeled-Aux'):
+                aux_labeled_layers, _ = rel_vocab.get_hidden(
+                    layer,
+                    reuse=reuse,
+                    hidden_size=self.aux_rel_hidden_size,
+                    task_emb_size=task_emb_size,
+                    task_scope=task_scope)
+            # labeled biaffine layer
+            if self.share_rel_biaffine:
+              with tf.variable_scope('Labeled'):
+                aux_labeled_outputs, _ = rel_vocab.get_bilinear_classifier(
+                    aux_labeled_layers, aux_unlabeled_outputs,
+                    token_weights=token_weights3D,
+                    variable_scope=labeled_bilinear_scope,
+                    reuse=reuse,
+                    share=True)
+            else:
+              with tf.variable_scope('Labeled-Aux'):
+                aux_labeled_outputs, _ = rel_vocab.get_bilinear_classifier(
+                    aux_labeled_layers, aux_unlabeled_outputs,
+                    token_weights=token_weights3D,
+                    reuse=reuse)
+            outputs['auxhead'] = aux_labeled_outputs
+          else:
+            outputs['auxhead'] = aux_unlabeled_outputs
       """
       if 'auxhead' in outputs:
         if self.aux_nonlocal_token_rate > 0:
@@ -218,7 +226,6 @@ class GraphMTLNetwork(BaseNetwork):
           print ('### False Negative Rate: {} ###'.format(self.fn_rate))
           outputs['auxhead']['loss'] += self.fn_rate * tf.to_float(outputs['auxhead']['n_false_negatives']) / tf.to_float(n_tokens)
       """
-
     return outputs, tokens
   
   def copy_unlabeled(self, outputs):

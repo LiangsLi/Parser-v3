@@ -112,6 +112,50 @@ class BaseNetwork(object):
     return
 
   #=============================================================
+  def get_mix_rate_upbounds(self):
+    mix_rates = [float(rate) for rate in self.mix_rates]
+    sum_rate = sum(mix_rates)
+    mix_rates = [rate/sum_rate for rate in mix_rates]
+    self._mix_rate_upbounds = [mix_rates[0]]
+    for i in range(1, len(mix_rates)):
+      self._mix_rate_upbounds.append(self._mix_rate_upbounds[i-1]+mix_rates[i])
+    return
+
+  #=============================================================
+  def next_batch(self, iters, sets):
+    """"""
+
+    update = False
+    # no aux set
+    if len(iters) == 1:
+      batch = next(iters[0], None)
+      if batch is None:
+        print ("### Reload trainset batches ###")
+        update = True
+        sets[0].load_next()
+        iters[0] = sets[0].batch_iterator(shuffle=True)
+        batch = next(iters[0], None)
+      feed_dict = sets[0].set_placeholders(batch)
+      return feed_dict, 0, update
+    # choose a set where the next batch come from
+    else:
+      assert len(self.mix_rate_upbounds) == len(iters)
+      rand = np.random.rand()
+      for i in range(len(self.mix_rate_upbounds)):
+        if rand <= self.mix_rate_upbounds[i]: break
+      #print (self.mix_rate_upbounds, rand, i)
+      batch = next(iters[i], None)
+      if batch is None:
+        print ("### Reload set-{} batches ###".format(i))
+        iters[i] = sets[i].batch_iterator(shuffle=True)
+        batch = next(iters[i], None)
+        if i == 0:
+          update = True
+          sets[0].load_next()
+      feed_dict = sets[i].set_placeholders(batch)
+      return feed_dict, i, update
+
+  #=============================================================
   def train(self, load=False, noscreen=False):
     """"""
 
@@ -122,7 +166,11 @@ class BaseNetwork(object):
 
     #testset = conllu_dataset.CoNLLUTestset(self.vocabs, config=self._config)
     use_aux = True if self.aux_conllus else False
-    auxset = None if not use_aux else conllu_dataset.CoNLLUAuxset(self.vocabs, config=self._config)
+    auxsets = None
+    if use_aux:
+      auxsets = [conllu_dataset.CoNLLUAuxset([aux_conllu], self.vocabs, config=self._config) for aux_conllu in self.aux_conllus]
+    print ("### Using {} Auxiliary Set(s) ###".format(len(auxsets)))
+    auxset = auxsets[0]
 
     factored_deptree = None
     factored_semgraph = None
@@ -145,7 +193,7 @@ class BaseNetwork(object):
       input_network_paths.append(self._config(self, input_network.classname+'_dir'))
     with tf.variable_scope(self.classname, reuse=False):
       #with tf.device('/gpu:0'):
-      train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False)
+      train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False, n_aux=len(auxsets))
       aux_outputs = None
       if use_aux and 'auxhead' in train_graph[0]:
         aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
@@ -221,19 +269,51 @@ class BaseNetwork(object):
           best_accuracy = 0
           current_accuracy = 0
           steps_since_best = 0
-          current_gpu_idx = 0
+          #if use_aux: aux_iter = auxset.batch_iterator(shuffle=True)
+          iters = [trainset.batch_iterator(shuffle=True)]
+          sets = [trainset]
+          outputs = [train_outputs]
+          tensors = [adam_train_tensors]
           if use_aux:
-            aux_iter = auxset.batch_iterator(shuffle=True)
+            self.get_mix_rate_upbounds()
+            iters += [auxset.batch_iterator(shuffle=True) for auxset in auxsets]
+            sets += auxsets
+            # TODO: make multiple aux_outputs
+            outputs += [aux_outputs]
+            tensors += [aux_adam_train_tensors]
+
           while (not self.max_steps or current_step < self.max_steps) and \
                 (not self.max_steps_without_improvement or steps_since_best < self.max_steps_without_improvement) and \
                 (not self.n_passes or current_epoch < len(trainset.conllu_files)*self.n_passes):
             if steps_since_best >= 1 and self.switch_optimizers and current_optimizer != 'AMSGrad':
-              train_tensors = amsgrad_train_tensors
+              #train_tensors = amsgrad_train_tensors
+              tensors[0] = amsgrad_train_tensors
               if use_aux:
                 aux_tensors = aux_amsgrad_train_tensors
+                tensors[1] = aux_amsgrad_train_tensors
               current_optimizer = 'AMSGrad'
               print('\t', end='')
               print('Current optimizer: {}\n'.format(current_optimizer), end='')
+
+            feed_dict, task_id, update = self.next_batch(iters, sets)
+            if update:
+              sess.run(update_step)
+            outputs[task_id].restart_timer()
+            start_time = time.time()
+
+            with tf.device('/gpu:0'):
+              if current_step < 10:
+                _, scores = sess.run(tensors[task_id], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
+                fetched_timeline = timeline.Timeline(run_metadata.step_stats)
+                chrome_trace = fetched_timeline.generate_chrome_trace_format()
+                with open(os.path.join(self.save_dir, 'profile', 'timeline_step_%d.json' % current_step), 'w') as f:
+                  f.write(chrome_trace)
+              else:
+                _, scores = sess.run(tensors[task_id], feed_dict=feed_dict)
+              outputs[task_id].update_history(scores)
+
+            """
+            # old version
             for batch in trainset.batch_iterator(shuffle=True):
               #print ("### Train on one batch of trainset ###")
 
@@ -241,7 +321,6 @@ class BaseNetwork(object):
               start_time = time.time()
               feed_dict = trainset.set_placeholders(batch)
               #---
-              #with tf.device('/gpu:%d' % current_gpu_idx):
               with tf.device('/gpu:0'):
                 if current_step < 10:
                   _, train_scores = sess.run(train_tensors, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
@@ -266,44 +345,45 @@ class BaseNetwork(object):
                   feed_dict = auxset.set_placeholders(aux_batch)
                   _, aux_scores = sess.run(aux_tensors, feed_dict=feed_dict)
                   aux_outputs.update_history(aux_scores)
-                current_gpu_idx = (current_gpu_idx + 1) % len(gpus)
+              """
 
-              current_step += 1
-              if current_step % self.print_every == 0:
-                for batch in devset.batch_iterator(shuffle=False):
-                  dev_outputs.restart_timer()
-                  feed_dict = devset.set_placeholders(batch)
-                  dev_scores = sess.run(dev_tensors, feed_dict=feed_dict)
-                  dev_outputs.update_history(dev_scores)
-                current_accuracy *= .5
-                current_accuracy += .5*dev_outputs.get_current_accuracy()
-                if current_accuracy >= best_accuracy:
-                  steps_since_best = 0
-                  best_accuracy = current_accuracy
-                  if self.save_model_after_improvement:
-                    saver.save(sess, os.path.join(self.save_dir, 'ckpt'), global_step=self.global_step, write_meta_graph=False)
-                  if self.parse_devset:
-                    self.parse_files(devset, dev_outputs, sess, print_time=False)
-                else:
-                  steps_since_best += self.print_every
-                current_epoch = sess.run(self.global_step)
-                print('\t', end='')
-                print('Epoch: {:3d}'.format(int(current_epoch)), end='')
-                print(' | ', end='')
-                print('Step: {:5d}\n'.format(int(current_step)), end='')
-                print('\t', end='')
-                print('Moving acc: {:5.2f}'.format(current_accuracy), end='')
-                print(' | ', end='')
-                print('Best moving acc: {:5.2f}\n'.format(best_accuracy), end='')
-                print('\t', end='')
-                print('Steps since improvement: {:4d}\n'.format(int(steps_since_best)), end='')
-                train_outputs.print_recent_history()
-                if use_aux:
-                  aux_outputs.print_recent_history()
-                dev_outputs.print_recent_history()
+            current_step += 1
+            if current_step % self.print_every == 0:
+              for batch in devset.batch_iterator(shuffle=False):
+                dev_outputs.restart_timer()
+                feed_dict = devset.set_placeholders(batch)
+                dev_scores = sess.run(dev_tensors, feed_dict=feed_dict)
+                dev_outputs.update_history(dev_scores)
+              current_accuracy *= .5
+              current_accuracy += .5*dev_outputs.get_current_accuracy()
+              if current_accuracy >= best_accuracy:
+                steps_since_best = 0
+                best_accuracy = current_accuracy
+                if self.save_model_after_improvement:
+                  saver.save(sess, os.path.join(self.save_dir, 'ckpt'), global_step=self.global_step, write_meta_graph=False)
+                if self.parse_devset:
+                  self.parse_files(devset, dev_outputs, sess, print_time=False)
+              else:
+                steps_since_best += self.print_every
+              current_epoch = sess.run(self.global_step)
+              print('\t', end='')
+              print('Epoch: {:3d}'.format(int(current_epoch)), end='')
+              print(' | ', end='')
+              print('Step: {:5d}\n'.format(int(current_step)), end='')
+              print('\t', end='')
+              print('Moving acc: {:5.2f}'.format(current_accuracy), end='')
+              print(' | ', end='')
+              print('Best moving acc: {:5.2f}\n'.format(best_accuracy), end='')
+              print('\t', end='')
+              print('Steps since improvement: {:4d}\n'.format(int(steps_since_best)), end='')
+              train_outputs.print_recent_history()
+              if use_aux:
+                aux_outputs.print_recent_history()
+              dev_outputs.print_recent_history()
+            
             current_epoch = sess.run(self.global_step)
-            sess.run(update_step)
-            trainset.load_next()
+            #sess.run(update_step)
+            #trainset.load_next()
           with open(os.path.join(self.save_dir, 'SUCCESS'), 'w') as f:
             pass
         except KeyboardInterrupt:
@@ -666,3 +746,9 @@ class BaseNetwork(object):
   @property
   def inter_threads(self):
     return self._config.getint(self, 'inter_threads')
+  @property
+  def mix_rates(self):
+    return self._config.getlist(self, 'mix_rates')
+  @property
+  def mix_rate_upbounds(self):
+    return self._mix_rate_upbounds

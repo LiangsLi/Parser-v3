@@ -320,7 +320,7 @@ class GraphIndexVocab(IndexVocab):
     add_linear = self.add_linear
     n_splits = 2*(1+self.linearize+self.distance)
     hidden_size = hidden_size or self.hidden_size
-    with tf.variable_scope(variable_scope or self.field, reuse=share):
+    with tf.variable_scope(variable_scope or self.field, reuse=share) as hidden_scope:
       for i in six.moves.range(0, self.n_layers-1):
         with tf.variable_scope('FC-%d' % i):
           layer = classifiers.hidden(layer, n_splits*hidden_size,
@@ -330,10 +330,11 @@ class GraphIndexVocab(IndexVocab):
         layers = classifiers.hiddens(layer, n_splits*[hidden_size],
                                      hidden_func=self.hidden_func,
                                      hidden_keep_prob=hidden_keep_prob)
-    return layers, task_scope
+    return layers, task_scope, hidden_scope
 
   #=============================================================
-  def get_bilinear_discriminator(self, layers, token_weights, variable_scope=None, reuse=False, hidden_size=None):
+  def get_bilinear_discriminator(self, layers, token_weights, variable_scope=None, reuse=False, 
+                                  hidden_size=None, share=None):
     """"""
 
     #recur_layer = layer
@@ -357,7 +358,7 @@ class GraphIndexVocab(IndexVocab):
     #else:
       #print ("index layers")
 
-    with tf.variable_scope(variable_scope or self.field):
+    with tf.variable_scope(variable_scope or self.field, reuse=share) as bilinear_scope:
       layer1, layer2 = layers.pop(0), layers.pop(0)
       if self.linearize:
         lin_layer1, lin_layer2 = layers.pop(0), layers.pop(0)
@@ -510,7 +511,7 @@ class GraphIndexVocab(IndexVocab):
     outputs['n_nonlocal_arcs'] = n_nonlocal_arcs
     outputs['n_predictions'] = n_predictions
     outputs['n_tokens'] = n_tokens
-    return outputs
+    return outputs, bilinear_scope
   
   #=============================================================
   # token should be: 1:rel|2:acl|5:dep or 1|2|5

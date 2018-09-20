@@ -249,5 +249,6 @@ class CoNLLUTestset(CoNLLUDataset):
 
 class CoNLLUAuxset(CoNLLUDataset):
   setname = 'aux'
-  def __init__(self, *args, config=None, **kwargs):
-    super(CoNLLUAuxset, self).__init__(config.getfiles(self, 'aux_conllus'), *args, config=config, **kwargs)
+  def __init__(self, conllu_file, *args, config=None, **kwargs):
+    #super(CoNLLUAuxset, self).__init__(config.getfiles(self, 'aux_conllus'), *args, config=config, **kwargs)
+    super(CoNLLUAuxset, self).__init__(conllu_file, *args, config=config, **kwargs)

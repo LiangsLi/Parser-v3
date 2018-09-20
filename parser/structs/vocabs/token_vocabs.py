@@ -669,7 +669,7 @@ class GraphTokenVocab(TokenVocab):
     hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
     add_linear = self.add_linear
     hidden_size = hidden_size or self.hidden_size
-    with tf.variable_scope(variable_scope or self.field, reuse=share):
+    with tf.variable_scope(variable_scope or self.field, reuse=share) as hidden_scope:
       for i in six.moves.range(0, self.n_layers-1):
         with tf.variable_scope('FC-%d' % i):
           layer = classifiers.hidden(layer, 2*hidden_size,
@@ -679,10 +679,11 @@ class GraphTokenVocab(TokenVocab):
         layers = classifiers.hiddens(layer, 2*[hidden_size],
                                     hidden_func=self.hidden_func,
                                     hidden_keep_prob=hidden_keep_prob)
-    return layers
+    return layers, hidden_scope
 
   #=============================================================
-  def get_bilinear_classifier(self, layers, outputs, token_weights, variable_scope=None, reuse=False):
+  def get_bilinear_classifier(self, layers, outputs, token_weights, variable_scope=None,
+                                reuse=False, share=None):
     """"""
     
     #recur_layer = layer
@@ -704,7 +705,7 @@ class GraphTokenVocab(TokenVocab):
     #else:
       #print ("token layers")
 
-    with tf.variable_scope(variable_scope or self.field):
+    with tf.variable_scope(variable_scope or self.field, reuse=share) as bilinear_scope:
       layer1, layer2 = layers.pop(0), layers.pop(0)
       with tf.variable_scope('Classifier'):
         if self.diagonal:
@@ -776,7 +777,7 @@ class GraphTokenVocab(TokenVocab):
     outputs['n_correct_sequences'] = n_correct_sequences
     outputs['n_correct_label_tokens'] = n_correct_label_tokens
     outputs['n_correct_label_sequences'] = n_correct_label_sequences
-    return outputs
+    return outputs, bilinear_scope
   
   #=============================================================
   def get_unfactored_bilinear_classifier(self, layer, token_weights, variable_scope=None, reuse=False):
