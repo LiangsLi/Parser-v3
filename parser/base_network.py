@@ -166,7 +166,7 @@ class BaseNetwork(object):
 
     #testset = conllu_dataset.CoNLLUTestset(self.vocabs, config=self._config)
     use_aux = True if self.aux_conllus else False
-    auxsets = None
+    auxsets = []
     if use_aux:
       auxsets = [conllu_dataset.CoNLLUAuxset([aux_conllu], self.vocabs, config=self._config) for aux_conllu in self.aux_conllus]
     print ("### Using {} Auxiliary Set(s) ###".format(len(auxsets)))
