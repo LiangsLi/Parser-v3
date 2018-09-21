@@ -259,9 +259,6 @@ class GraphMTLNetwork(BaseNetwork):
     return self._config.getboolean(self, 'sum_pos')
   # semrel.factorized has to be True if this is True
   @property
-  def share_head_mlp(self):
-    return self._config.getboolean(self, 'share_head_mlp')
-  @property
   def aux_label(self):
     return self._config.getboolean(self, 'aux_label')
   @property
