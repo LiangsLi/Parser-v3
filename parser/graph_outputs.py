@@ -54,9 +54,12 @@ class GraphOutputs(object):
                     ('semgraph', 'LF1')]
   
   #=============================================================
-  def __init__(self, outputs, tokens, load=False, evals=None, factored_deptree=None, factored_semgraph=None, config=None):
+  def __init__(self, outputs, tokens, load=False, evals=None, factored_deptree=None, 
+                factored_semgraph=None, config=None, dataset=None):
     """"""
     
+    if dataset is not None:
+      self._dataset = dataset
     self._factored_deptree = factored_deptree
     self._factored_semgraph = factored_semgraph
     self._config = config
@@ -111,8 +114,9 @@ class GraphOutputs(object):
               'n_edges': 0,
               'sequences': [0]
             }
-        elif field == 'auxhead':
-          self.history['semhead'] = {
+        elif field == 'auxgraph':
+          for string in ('head', 'graph'):
+            self.history['sem'+string] = {
               'loss': [0],
               'tokens': [0],
               'fp_tokens': 0,
@@ -461,12 +465,17 @@ class GraphOutputs(object):
         self.history['deptree']['loss'][-1] += output['loss']
         self.history['deptree']['tokens'][-1] += output['n_correct_tokens']
         self.history['deptree']['sequences'][-1] += output['n_correct_sequences']
-      elif field == 'auxhead':
+      elif field == 'auxgraph':
         self.history['semhead']['loss'][-1] += output['unlabeled_loss']
         self.history['semhead']['tokens'][-1] += output['n_unlabeled_true_positives']
         self.history['semhead']['fp_tokens'] += output['n_unlabeled_false_positives']
         self.history['semhead']['fn_tokens'] += output['n_unlabeled_false_negatives']
         self.history['semhead']['sequences'][-1] += output['n_correct_unlabeled_sequences']
+        self.history['semgraph']['loss'][-1] += output['loss']
+        self.history['semgraph']['tokens'][-1] += output['n_true_positives']
+        self.history['semgraph']['fp_tokens'] += output['n_false_positives']
+        self.history['semgraph']['fn_tokens'] += output['n_false_negatives']
+        self.history['semgraph']['sequences'][-1] += output['n_correct_sequences']
       elif field != 'total':
         self.history[field]['loss'][-1] += output['loss']
         self.history[field]['tokens'][-1] += output['n_correct_tokens']

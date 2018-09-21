@@ -88,7 +88,7 @@ class BaseNetwork(object):
         else:
           VocabClass = getattr(vocabs, output_vocab_classname)
           vocab = VocabClass(config=config)
-          if 'Semrel' in output_vocab_classname:
+          if 'Semrel' in output_vocab_classname and not self.aux_label:
             vocab.load() or vocab.count(self.train_conllus, aux_conllus=None)
           else:
             vocab.load() or vocab.count(self.train_conllus, aux_conllus=aux_conllus)
@@ -195,12 +195,22 @@ class BaseNetwork(object):
       #with tf.device('/gpu:0'):
       train_graph = self.build_graph(input_network_outputs=input_network_outputs, reuse=False, n_aux=len(auxsets))
       aux_outputs = None
+      if use_aux:
+        aux_graphs = []
+        aux_outputs = []
+        for i in range(len(auxsets)):
+          aux_graphs.append([{'auxgraph':train_graph[0].pop('auxgraph-%d'%i)}])
+          aux_graphs[-1].append(train_graph[1])
+          aux_outputs.append(AuxOutputs(*aux_graphs[i], load=load, evals=self._evals, factored_deptree=False, 
+                                          factored_semgraph=False, config=self._config, dataset='aux-%d'%i))
+      """
       if use_aux and 'auxhead' in train_graph[0]:
         aux_graph = [{'auxhead':train_graph[0].pop('auxhead')}]
         aux_graph.append(train_graph[1])
         aux_outputs = AuxOutputs(*aux_graph, load=load, evals=self._evals, factored_deptree=False, factored_semgraph=False, config=self._config)
       elif 'auxhead' in  train_graph[0]:
         train_graph[0].pop('auxhead')
+      """
       train_outputs = TrainOutputs(*train_graph, load=load, evals=self._evals, factored_deptree=factored_deptree, factored_semgraph=factored_semgraph, config=self._config)
     with tf.variable_scope(self.classname, reuse=True):
       #with tf.device('/gpu:0'):
@@ -216,10 +226,13 @@ class BaseNetwork(object):
     amsgrad_op = amsgrad.minimize(train_outputs.loss + regularization_loss, variables=tf.trainable_variables(scope=self.classname)) # returns the current step
     amsgrad_train_tensors = [amsgrad_op, train_outputs.accuracies]
     if use_aux and aux_outputs is not None:
-      aux_adam_op = adam.minimize(aux_outputs.loss, variables=tf.trainable_variables(scope=self.classname))
-      aux_adam_train_tensors = [aux_adam_op, aux_outputs.accuracies]
-      aux_amsgrad_op = amsgrad.minimize(aux_outputs.loss, variables=tf.trainable_variables(scope=self.classname))
-      aux_amsgrad_train_tensors = [aux_amsgrad_op, aux_outputs.accuracies]
+      aux_adam_train_tensors = []
+      aux_amsgrad_train_tensors = []
+      for i in range(len(aux_outputs)):
+        aux_adam_op = adam.minimize(aux_outputs[i].loss, variables=tf.trainable_variables(scope=self.classname))
+        aux_adam_train_tensors.append([aux_adam_op, aux_outputs[i].accuracies])
+        aux_amsgrad_op = amsgrad.minimize(aux_outputs[i].loss, variables=tf.trainable_variables(scope=self.classname))
+        aux_amsgrad_train_tensors.append([aux_amsgrad_op, aux_outputs[i].accuracies])
     dev_tensors = dev_outputs.accuracies
     # I think this needs to come after the optimizers
     if self.save_model_after_improvement or self.save_model_after_training:
@@ -256,9 +269,18 @@ class BaseNetwork(object):
         exit(1)
       else:
         current_optimizer = 'Adam'
-        train_tensors = adam_train_tensors
+        iters = [trainset.batch_iterator(shuffle=True)]
+        sets = [trainset]
+        outputs = [train_outputs]
+        tensors = [adam_train_tensors]
+        trains = [0]
         if use_aux:
-          aux_tensors = aux_adam_train_tensors
+          trains += [0] * len(auxsets)
+          self.get_mix_rate_upbounds()
+          iters += [auxset.batch_iterator(shuffle=True) for auxset in auxsets]
+          sets += auxsets
+          outputs += aux_outputs
+          tensors += aux_adam_train_tensors
         current_step = 0
         print('\t', end='')
         print('{}\n'.format(self.save_dir), end='')
@@ -269,33 +291,20 @@ class BaseNetwork(object):
           best_accuracy = 0
           current_accuracy = 0
           steps_since_best = 0
-          #if use_aux: aux_iter = auxset.batch_iterator(shuffle=True)
-          iters = [trainset.batch_iterator(shuffle=True)]
-          sets = [trainset]
-          outputs = [train_outputs]
-          tensors = [adam_train_tensors]
-          if use_aux:
-            self.get_mix_rate_upbounds()
-            iters += [auxset.batch_iterator(shuffle=True) for auxset in auxsets]
-            sets += auxsets
-            # TODO: make multiple aux_outputs
-            outputs += [aux_outputs]
-            tensors += [aux_adam_train_tensors]
-
           while (not self.max_steps or current_step < self.max_steps) and \
                 (not self.max_steps_without_improvement or steps_since_best < self.max_steps_without_improvement) and \
                 (not self.n_passes or current_epoch < len(trainset.conllu_files)*self.n_passes):
             if steps_since_best >= 1 and self.switch_optimizers and current_optimizer != 'AMSGrad':
-              #train_tensors = amsgrad_train_tensors
               tensors[0] = amsgrad_train_tensors
               if use_aux:
-                aux_tensors = aux_amsgrad_train_tensors
-                tensors[1] = aux_amsgrad_train_tensors
+                for i in range(1, len(tensors)):
+                  tensors[i] = aux_amsgrad_train_tensors[i-1]
               current_optimizer = 'AMSGrad'
               print('\t', end='')
               print('Current optimizer: {}\n'.format(current_optimizer), end='')
 
             feed_dict, task_id, update = self.next_batch(iters, sets)
+            trains[task_id] += 1
             if update:
               sess.run(update_step)
             outputs[task_id].restart_timer()
@@ -378,8 +387,12 @@ class BaseNetwork(object):
               print('Steps since improvement: {:4d}\n'.format(int(steps_since_best)), end='')
               train_outputs.print_recent_history()
               if use_aux:
-                aux_outputs.print_recent_history()
+                for i in range(len(aux_outputs)):
+                  aux_outputs[i].print_recent_history()
               dev_outputs.print_recent_history()
+              print ("Batch splits: {}".format(":".join([str(b) for b in trains])))
+              for i in range(len(trains)):
+                trains[i] = 0
             
             current_epoch = sess.run(self.global_step)
             #sess.run(update_step)
@@ -752,3 +765,6 @@ class BaseNetwork(object):
   @property
   def mix_rate_upbounds(self):
     return self._mix_rate_upbounds
+  @property
+  def aux_label(self):
+    return self._config.getboolean(self, 'aux_label')
