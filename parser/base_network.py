@@ -170,7 +170,6 @@ class BaseNetwork(object):
     if use_aux:
       auxsets = [conllu_dataset.CoNLLUAuxset([aux_conllu], self.vocabs, config=self._config) for aux_conllu in self.aux_conllus]
     print ("### Using {} Auxiliary Set(s) ###".format(len(auxsets)))
-    auxset = auxsets[0]
 
     factored_deptree = None
     factored_semgraph = None
