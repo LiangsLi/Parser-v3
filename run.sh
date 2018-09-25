@@ -34,3 +34,6 @@ fi
 #source env/bin/activate
 source /home/alex/work/env/py3/bin/activate
 CUDA_VISIBLE_DEVICES=$gpu python3 $main --save_dir $save run --output_dir $out $file --other_save_dirs $other
+deactivate
+tosem16=converter/conllu_to_sem16.py
+python $tosem16 $out/$infile.conllu

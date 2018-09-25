@@ -10,6 +10,6 @@ if [[ -z $1 || $1 == '-h' ]];then
   exit
 fi
 
-python $tosem16 $pred
+#python $tosem16 $pred
 #python $check $pred.sem16
-python $eval --reference $gold --answer $pred.sem16 --language chen2014ch
+python $eval --reference $gold --answer $pred --language chen2014ch
