@@ -1,8 +1,8 @@
 # Checking virtualenv
-if [[ ! -f "env/bin/activate" ]];then
-  echo "Please first build virtualenv with setup.sh!"
-  exit
-fi
+#if [[ ! -f "env/bin/activate" ]];then
+#  echo "Please first build virtualenv with setup.sh!"
+#  exit
+#fi
 
 # Preprocessing
 if [[ ! -d "data/text-conllu" ]];then
@@ -31,5 +31,6 @@ other=saves/text-1:saves/text-2:saves/text-3:saves/text-4
 if [[ ! -d outputs ]];then
   mkdir outputs
 fi
-source env/bin/activate
+#source env/bin/activate
+source /home/alex/work/env/py3/bin/activate
 CUDA_VISIBLE_DEVICES=$gpu python3 $main --save_dir $save run --output_dir $out $file --other_save_dirs $other
