@@ -243,7 +243,10 @@ if __name__ == "__main__" :
     LP = float(nr_total_right_deprels) / nr_total_test_rels if nr_total_test_rels != 0 else  INF 
     LR = float(nr_total_right_deprels) / nr_total_gold_rels if nr_total_gold_rels != 0 else INF
     LF = float(2 * nr_total_right_deprels) / (nr_total_test_rels + nr_total_gold_rels) if (nr_total_gold_rels + nr_total_test_rels) != 0 else INF
-    
+    TP = nr_total_right_deprels
+    FP = nr_total_test_rels - nr_total_right_deprels
+    FN = nr_total_gold_rels - nr_total_right_deprels
+
     NLP = float(nr_total_right_deprel_non_local ) / nr_total_test_non_local if nr_total_test_non_local != 0 else INF
     NLR = float(nr_total_right_deprel_non_local) / nr_total_gold_non_local if nr_total_gold_non_local != 0 else INF
     NLF = float( 2 * nr_total_right_deprel_non_local ) / (nr_total_test_non_local + nr_total_gold_non_local) if (nr_total_test_non_local + nr_total_gold_non_local) != 0 else INF
@@ -274,7 +277,7 @@ if __name__ == "__main__" :
         print "total sentence with right head : {0}".format(nr_right_sentence_head)
         print "total sentence with right label : {0}".format(nr_right_sentence_deprel)
         print "{0}{0}{0}".format("-"*15)
-
+    print "TP: {}, FP: {}, FN: {}".format(TP, FP, FN)
     print "{0:^10}{1:^10}{2:^10}{3:^10}{4:^10}{5:^10}{6:^10}{7:^10}{8:^10}{9:^10}".format(
             "LP" , "LR" , "LF" , "NLF" , "UP" , "UR" , "UF" , "NUF" , "LM" , "UM")
     print "{0[0]:^10}{0[1]:^10}{0[2]:^10}{0[3]:^10}{0[4]:^10}{0[5]:^10}{0[6]:^10}{0[7]:^10}{0[8]:^10}{0[9]:^10}".format(
