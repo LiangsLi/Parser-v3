@@ -355,8 +355,6 @@ class GraphIndexVocab(IndexVocab):
           layers = classifiers.hiddens(layer, n_splits*[hidden_size],
                                      hidden_func=self.hidden_func,
                                      hidden_keep_prob=hidden_keep_prob)
-    #else:
-      #print ("index layers")
 
     with tf.variable_scope(variable_scope or self.field, reuse=share) as bilinear_scope:
       layer1, layer2 = layers.pop(0), layers.pop(0)

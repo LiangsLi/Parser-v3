@@ -83,134 +83,199 @@ class GraphMTLNetwork(BaseNetwork):
     recur_keep_prob = 1. if reuse else self.recur_keep_prob
     recur_include_prob = 1. if reuse else self.recur_include_prob
     
-    for i in six.moves.range(self.n_layers):
-      conv_width = self.first_layer_conv_width if not i else self.conv_width
-      with tf.variable_scope('RNN-{}'.format(i)):
-        layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
-                                          bidirectional=self.bidirectional,
-                                          recur_cell=self.recur_cell,
-                                          conv_width=conv_width,
-                                          recur_func=self.recur_func,
-                                          conv_keep_prob=conv_keep_prob,
-                                          recur_include_prob=recur_include_prob,
-                                          recur_keep_prob=recur_keep_prob,
-                                          cifg=self.cifg,
-                                          highway=self.highway,
-                                          highway_func=self.highway_func,
-                                          bilin=self.bilin)
-  
+    main_layers = []
+    share_layers = []
+    aux_layers = []
+    # rnn for main task specifically
+    with tf.variable_scope('Maintask'):
+      for i in six.moves.range(self.n_layers):
+        conv_width = self.first_layer_conv_width if not i else self.conv_width
+        with tf.variable_scope('RNN-{}'.format(i)):
+          layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
+                                            bidirectional=self.bidirectional,
+                                            recur_cell=self.recur_cell,
+                                            conv_width=conv_width,
+                                            recur_func=self.recur_func,
+                                            conv_keep_prob=conv_keep_prob,
+                                            recur_include_prob=recur_include_prob,
+                                            recur_keep_prob=recur_keep_prob,
+                                            cifg=self.cifg,
+                                            highway=self.highway,
+                                            highway_func=self.highway_func,
+                                            bilin=self.bilin)
+          main_layers.append(layer)
+    # shared rnn
+    if self.share_rnn:
+      with tf.variable_scope('Share'):
+        for i in six.moves.range(self.n_layers):
+          conv_width = self.first_layer_conv_width if not i else self.conv_width
+          with tf.variable_scope('RNN-{}'.format(i)):
+            layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
+                                              bidirectional=self.bidirectional,
+                                              recur_cell=self.recur_cell,
+                                              conv_width=conv_width,
+                                              recur_func=self.recur_func,
+                                              conv_keep_prob=conv_keep_prob,
+                                              recur_include_prob=recur_include_prob,
+                                              recur_keep_prob=recur_keep_prob,
+                                              cifg=self.cifg,
+                                              highway=self.highway,
+                                              highway_func=self.highway_func,
+                                              bilin=self.bilin)
+            share_layers.append(layer)
+    # rnn for aux tasks specifically
+    for n in range(n_aux):
+      aux_layers.append([])
+      with tf.variable_scope('Aux-%d' % n):
+        for i in six.moves.range(self.n_layers):
+          conv_width = self.first_layer_conv_width if not i else self.conv_width
+          with tf.variable_scope('RNN-{}'.format(i)):
+            layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
+                                              bidirectional=self.bidirectional,
+                                              recur_cell=self.recur_cell,
+                                              conv_width=conv_width,
+                                              recur_func=self.recur_func,
+                                              conv_keep_prob=conv_keep_prob,
+                                              recur_include_prob=recur_include_prob,
+                                              recur_keep_prob=recur_keep_prob,
+                                              cifg=self.cifg,
+                                              highway=self.highway,
+                                              highway_func=self.highway_func,
+                                              bilin=self.bilin)
+            aux_layers[-1].append(layer)
+
     output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
     outputs = {}
     task_emb_size = self.task_emb_size if self.task_emb_size > 0 else None
-    #print ("\n### main dataset ###")
+    print ("\n### main dataset ###")
+    rel_vocab = output_fields['semrel']
+    head_vocab = output_fields['semhead']
+
     with tf.variable_scope('Classifiers'):
+      if self.share_rnn:
+        with tf.variable_scope('Share'):
+          if self.share_arc_mlp or self.share_rel_mlp:
+            l = -1
+            layer = share_layers[l]
+          print ("shared mlp input layer: ",layer)
+          if self.share_arc_mlp:
+            with tf.variable_scope('Unlabeled'):
+              shared_unlabeled_layers, _, _ = head_vocab.get_hidden(
+                layer,
+                reuse=reuse,
+                hidden_size=self.share_arc_hidden_size)
+          if self.share_rel_mlp:
+            with tf.variable_scope('Labeled'):
+              with tf.device('/gpu:1'):
+                shared_labeled_layers, _ = rel_vocab.get_hidden(
+                  layer,
+                  reuse=reuse,
+                  hidden_size=self.share_rel_hidden_size)
+
       # target dataset
       if 'semrel' in output_fields:
-        vocab = output_fields['semrel']
-        if vocab.factorized:
-          head_vocab = output_fields['semhead']
-          with tf.variable_scope('Unlabeled'):
-            unlabeled_layers, task_scope, unlabeled_hidden_scope = head_vocab.get_hidden(
-              layer,
-              reuse=reuse,
-              task_emb_size=task_emb_size,
-              task_scope='Maintask')
-            #print (task_scope)
-            unlabeled_outputs, unlabeled_bilinear_scope = head_vocab.get_bilinear_discriminator(
-              unlabeled_layers,
-              token_weights=token_weights3D,
-              reuse=reuse)
-            #unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
-          with tf.variable_scope('Labeled'):
-            with tf.device('/gpu:1'):
-              labeled_layers, labeled_hidden_scope = vocab.get_hidden(
+        #vocab = output_fields['semrel']
+        with tf.variable_scope('Maintask'):
+          l = -1
+          if self.share_rnn:
+            layer = tf.concat([main_layers[l], share_layers[l]], -1)
+          else:
+            layer = main_layers[l]
+          #print ("maintask mlp input layer: ",layer)
+          if rel_vocab.factorized:
+            #head_vocab = output_fields['semhead']
+            with tf.variable_scope('Unlabeled'):
+              unlabeled_layers, task_scope, _ = head_vocab.get_hidden(
                 layer,
                 reuse=reuse,
                 task_emb_size=task_emb_size,
-                task_scope=task_scope)
-              labeled_outputs, labeled_bilinear_scope = vocab.get_bilinear_classifier(
-                labeled_layers, unlabeled_outputs,
+                task_scope='Maintask')
+              if self.share_rnn and self.share_arc_mlp:
+                unlabeled_layers = [tf.concat([main, share], -1) for main, share in zip(unlabeled_layers, shared_unlabeled_layers)]
+              unlabeled_outputs, unlabeled_bilinear_scope = head_vocab.get_bilinear_discriminator(
+                unlabeled_layers,
                 token_weights=token_weights3D,
                 reuse=reuse)
-        else:
-          labeled_outputs = vocab.get_unfactored_bilinear_classifier(layer, head_vocab.placeholder,
-            token_weights=token_weights3D,
-            reuse=reuse)
-        outputs['semgraph'] = labeled_outputs
-        self._evals.add('semgraph')
-      # auxiliary dataset
-      aux_vocab = output_fields['semhead']
-      rel_vocab = output_fields['semrel']
-      # unlabeled mlp
-      for n in range(n_aux):
-        #print ("\n### aux dataset-%d ###" % n)
-        with tf.variable_scope('Aux-%d' % n):
-          if self.share_arc_mlp:
-            with tf.variable_scope('Unlabeled'):
-              aux_unlabeled_layers, task_scope, _ = aux_vocab.get_hidden(
-                  layer,
-                  variable_scope=unlabeled_hidden_scope,
-                  reuse=reuse,
-                  share=True,
-                  task_emb_size=task_emb_size,
-                  task_scope='Auxtask')
-          else:
-            with tf.variable_scope('Unlabeled'):
-              aux_unlabeled_layers, task_scope, _ = aux_vocab.get_hidden(
+            #unlabeled_copy = self.copy_unlabeled(unlabeled_outputs)
+            with tf.variable_scope('Labeled'):
+              with tf.device('/gpu:1'):
+                labeled_layers, _ = rel_vocab.get_hidden(
                   layer,
                   reuse=reuse,
-                  hidden_size=self.aux_arc_hidden_size,
                   task_emb_size=task_emb_size,
-                  task_scope='Auxtask')
-          # unlabeled biaffine classifier
-          if self.share_arc_biaffine:
-            with tf.variable_scope('Unlabeled'):
-              aux_unlabeled_outputs, _ = aux_vocab.get_bilinear_discriminator(
-                  aux_unlabeled_layers,
-                  variable_scope=unlabeled_bilinear_scope,
-                  token_weights=token_weights3D,
-                  reuse=reuse,
-                  share=True)
-          else:
-            with tf.variable_scope('Unlabeled'):
-              aux_unlabeled_outputs, _ = aux_vocab.get_bilinear_discriminator(
-                  aux_unlabeled_layers,
+                  task_scope=task_scope)
+                if self.share_rnn and self.share_rel_mlp:
+                  labeled_layers = [tf.concat([main, share], -1) for main, share in zip(labeled_layers, shared_labeled_layers)]
+                labeled_outputs, labeled_bilinear_scope = rel_vocab.get_bilinear_classifier(
+                  labeled_layers, unlabeled_outputs,
                   token_weights=token_weights3D,
                   reuse=reuse)
+          else:
+            labeled_outputs = rel_vocab.get_unfactored_bilinear_classifier(layer, head_vocab.placeholder,
+              token_weights=token_weights3D,
+              reuse=reuse)
+          outputs['semgraph'] = labeled_outputs
+          self._evals.add('semgraph')
+      # auxiliary dataset
+      # unlabeled mlp
+      for n in range(n_aux):
+        print ("\n### aux dataset-%d ###" % n)
+        with tf.variable_scope('Aux-%d' % n):
+          l = -1
+          if self.share_rnn:
+            layer = tf.concat([aux_layers[n][l], share_layers[l]], -1)
+          else:
+            layer = aux_layers[n][l]
+          #print ("auxtask mlp input layer: ",layer)
+          # unlabled hidden layer
+          with tf.variable_scope('Unlabeled'):
+            aux_unlabeled_layers, task_scope, _ = head_vocab.get_hidden(
+                layer,
+                reuse=reuse,
+                hidden_size=self.aux_arc_hidden_size,
+                task_emb_size=task_emb_size,
+                task_scope='Auxtask')
+          if self.share_rnn and self.share_arc_mlp:
+            aux_unlabeled_layers = [tf.concat([aux, share], -1) for aux, share in zip(aux_unlabeled_layers, shared_unlabeled_layers)]
+          # unlabeled biaffine classifier
+          if self.share_arc_biaffine:
+            share = True
+          else:
+            share = None
+            unlabeled_bilinear_scope = None
+          with tf.variable_scope('Unlabeled'):
+            aux_unlabeled_outputs, _ = head_vocab.get_bilinear_discriminator(
+                aux_unlabeled_layers,
+                variable_scope=unlabeled_bilinear_scope,
+                token_weights=token_weights3D,
+                reuse=reuse,
+                share=share)
+
           if self.aux_label:
-            # labeled hidden
-            if self.share_rel_mlp:
-              with tf.variable_scope('Labeled'):
-                aux_labeled_layers, _ = rel_vocab.get_hidden(
-                    layer,
-                    variable_scope=labeled_hidden_scope,
-                    reuse=reuse,
-                    share=True,
-                    task_emb_size=task_emb_size,
-                    task_scope=task_scope)
-            else:
-              with tf.variable_scope('Labeled'):
-                aux_labeled_layers, _ = rel_vocab.get_hidden(
-                    layer,
-                    reuse=reuse,
-                    hidden_size=self.aux_rel_hidden_size,
-                    task_emb_size=task_emb_size,
-                    task_scope=task_scope)
+            # labeled hidden layer
+            with tf.variable_scope('Labeled'):
+              aux_labeled_layers, _ = rel_vocab.get_hidden(
+                  layer,
+                  reuse=reuse,
+                  hidden_size=self.aux_rel_hidden_size,
+                  task_emb_size=task_emb_size,
+                  task_scope=task_scope)
+            if self.share_rnn and self.share_rel_mlp:
+              aux_labeled_layers = [tf.concat([aux, share], -1) for aux, share in zip(aux_labeled_layers, shared_labeled_layers)]
             # labeled biaffine layer
             if self.share_rel_biaffine:
-              with tf.variable_scope('Labeled'):
-                aux_labeled_outputs, _ = rel_vocab.get_bilinear_classifier(
-                    aux_labeled_layers, aux_unlabeled_outputs,
-                    token_weights=token_weights3D,
-                    variable_scope=labeled_bilinear_scope,
-                    reuse=reuse,
-                    share=True)
+              share = True
             else:
-              with tf.variable_scope('Labeled'):
-                aux_labeled_outputs, _ = rel_vocab.get_bilinear_classifier(
-                    aux_labeled_layers, aux_unlabeled_outputs,
-                    token_weights=token_weights3D,
-                    reuse=reuse)
+              share = None
+              labeled_bilinear_scope = None
+            with tf.variable_scope('Labeled'):
+              aux_labeled_outputs, _ = rel_vocab.get_bilinear_classifier(
+                  aux_labeled_layers, aux_unlabeled_outputs,
+                  token_weights=token_weights3D,
+                  variable_scope=labeled_bilinear_scope,
+                  reuse=reuse,
+                  share=share)
+
             outputs['auxgraph-%d' % n] = aux_labeled_outputs
           else:
             outputs['auxgraph-%d' % n] = aux_unlabeled_outputs
@@ -262,6 +327,9 @@ class GraphMTLNetwork(BaseNetwork):
   def aux_label(self):
     return self._config.getboolean(self, 'aux_label')
   @property
+  def share_rnn(self):
+    return self._config.getboolean(self, 'share_rnn')
+  @property
   def share_arc_mlp(self):
     return self._config.getboolean(self, 'share_arc_mlp')
   @property
@@ -273,6 +341,12 @@ class GraphMTLNetwork(BaseNetwork):
   @property
   def share_rel_biaffine(self):
     return self._config.getboolean(self, 'share_rel_biaffine')
+  @property
+  def share_arc_hidden_size(self):
+    return self._config.getint(self, 'share_arc_hidden_size')
+  @property
+  def share_rel_hidden_size(self):
+    return self._config.getint(self, 'share_rel_hidden_size')
   @property
   def aux_arc_hidden_size(self):
     return self._config.getint(self, 'aux_arc_hidden_size')

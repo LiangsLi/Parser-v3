@@ -702,8 +702,6 @@ class GraphTokenVocab(TokenVocab):
           layers = classifiers.hiddens(layer, 2*[self.hidden_size],
                                     hidden_func=self.hidden_func,
                                     hidden_keep_prob=hidden_keep_prob)
-    #else:
-      #print ("token layers")
 
     with tf.variable_scope(variable_scope or self.field, reuse=share) as bilinear_scope:
       layer1, layer2 = layers.pop(0), layers.pop(0)
