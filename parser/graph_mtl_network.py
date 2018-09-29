@@ -147,7 +147,7 @@ class GraphMTLNetwork(BaseNetwork):
     output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
     outputs = {}
     task_emb_size = self.task_emb_size if self.task_emb_size > 0 else None
-    print ("\n### main dataset ###")
+    #print ("\n### main dataset ###")
     rel_vocab = output_fields['semrel']
     head_vocab = output_fields['semhead']
 
@@ -157,7 +157,7 @@ class GraphMTLNetwork(BaseNetwork):
           if self.share_arc_mlp or self.share_rel_mlp:
             l = -1
             layer = share_layers[l]
-          print ("shared mlp input layer: ",layer)
+          #print ("shared mlp input layer: ",layer)
           if self.share_arc_mlp:
             with tf.variable_scope('Unlabeled'):
               shared_unlabeled_layers, _, _ = head_vocab.get_hidden(
@@ -219,9 +219,10 @@ class GraphMTLNetwork(BaseNetwork):
       # auxiliary dataset
       # unlabeled mlp
       for n in range(n_aux):
-        print ("\n### aux dataset-%d ###" % n)
+        #print ("\n### aux dataset-%d ###" % n)
+        self.get_aux_rnn_layers()
         with tf.variable_scope('Aux-%d' % n):
-          l = -1
+          l = self.aux_rnn_layers[n]
           if self.share_rnn:
             layer = tf.concat([aux_layers[n][l], share_layers[l]], -1)
           else:
@@ -318,11 +319,27 @@ class GraphMTLNetwork(BaseNetwork):
     }
     return copy
 
+  def get_aux_rnn_layers(self):
+    self._aux_rnn_layers = None
+    if len(self.aux_rnn_used_layers):
+      self._aux_rnn_layers = [int(l) for l in self.aux_rnn_used_layers]
+    for i in self.aux_rnn_layers:
+      try:
+        assert (i < self.n_layers)
+      except:
+        raise ValueError("RNN used layer should be less than max layer")
+    return
+
   #=============================================================
   @property
   def sum_pos(self):
     return self._config.getboolean(self, 'sum_pos')
-  # semrel.factorized has to be True if this is True
+  @property
+  def aux_rnn_used_layers(self):
+    return self._config.getlist(self, 'aux_rnn_used_layers')
+  @property
+  def aux_rnn_layers(self):
+    return self._aux_rnn_layers
   @property
   def aux_label(self):
     return self._config.getboolean(self, 'aux_label')

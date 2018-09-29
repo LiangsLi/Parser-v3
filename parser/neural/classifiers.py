@@ -25,6 +25,8 @@ import tensorflow as tf
 from . import nn
 from . import nonlin
 
+DEBUG = False
+
 #***************************************************************
 def hidden(layer, hidden_size, hidden_func=nonlin.relu, hidden_keep_prob=1.):
   """"""
@@ -58,7 +60,8 @@ def hiddens(layer, hidden_sizes, hidden_func=nonlin.relu, hidden_keep_prob=1.):
   weights = tf.concat(weights, axis=1)
   hidden_size = sum(hidden_sizes)
   biases = tf.get_variable('Biases', shape=[hidden_size], initializer=tf.zeros_initializer)
-  print ('### hiddens: {}, shape: {}'.format(biases.name, biases.shape))
+  if DEBUG:
+    print ('### hiddens: {}, shape: {}'.format(biases.name, biases.shape))
   if hidden_keep_prob < 1.:
     if len(layer_shape) > 1:
       noise_shape = tf.stack(layer_shape[:-1] + [1, input_size])
@@ -213,7 +216,8 @@ def bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob=1., add_li
   ones_shape = tf.stack(layer_shape + [1])
   
   weights = tf.get_variable('Weights', shape=[input1_size, output_size, input2_size], initializer=tf.zeros_initializer)
-  print ('### bilinear classifier: {}, shape: {}'.format(weights.name, weights.shape))
+  if DEBUG:
+    print ('### bilinear classifier: {}, shape: {}'.format(weights.name, weights.shape))
   if hidden_keep_prob < 1.:
     noise_shape1 = tf.stack(layer_shape[:-1] + [1, input1_size-add_linear])
     noise_shape2 = tf.stack(layer_shape[:-1] + [1, input2_size-add_linear])
@@ -427,7 +431,8 @@ def bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
   ones_shape = tf.stack(layer_shape + [1])
   
   weights = tf.get_variable('Weights', shape=[input1_size, input2_size], initializer=tf.zeros_initializer)
-  print ('### bilinear attention: {}, shape: {}'.format(weights.name, weights.shape))
+  if DEBUG:
+    print ('### bilinear attention: {}, shape: {}'.format(weights.name, weights.shape))
   tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights))
   original_layer1 = layer1
   if hidden_keep_prob < 1.:
