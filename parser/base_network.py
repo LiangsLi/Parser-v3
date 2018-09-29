@@ -310,7 +310,7 @@ class BaseNetwork(object):
             start_time = time.time()
 
             with tf.device('/gpu:0'):
-              if current_step < 10:
+              if current_step < 5:
                 _, scores = sess.run(tensors[task_id], feed_dict=feed_dict, options=options, run_metadata=run_metadata)
                 fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                 chrome_trace = fetched_timeline.generate_chrome_trace_format()
