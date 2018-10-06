@@ -73,13 +73,18 @@ class GraphMTLNetwork(BaseNetwork):
       for input_network, output in input_network_outputs:
         with tf.variable_scope(input_network.classname):
           input_tensors.append(input_network.get_input_tensor(output, reuse=reuse))
-      layer = tf.concat(input_tensors, 2)
+      layer0 = tf.concat(input_tensors, 2)
+      aux_layer0 = None
       if self.aux_char:
-        aux_layer = tf.concat(aux_tensors, 2)
+        aux_layer0 = tf.concat(aux_tensors, 2)
 
-    n_nonzero = tf.to_float(tf.count_nonzero(layer, axis=-1, keep_dims=True))
-    batch_size, bucket_size, input_size = nn.get_sizes(layer)
-    layer *= input_size / (n_nonzero + tf.constant(1e-12))
+    n_nonzero = tf.to_float(tf.count_nonzero(layer0, axis=-1, keep_dims=True))
+    batch_size, bucket_size, input_size = nn.get_sizes(layer0)
+    layer0 *= input_size / (n_nonzero + tf.constant(1e-12))
+
+    if self.aux_char:
+      n_nonzero = tf.to_float(tf.count_nonzero(aux_layer0, axis=-1, keep_dims=True))
+      aux_layer0 *= input_size / (n_nonzero + tf.constant(1e-12))
     
     token_weights = nn.greater(self.id_vocab.placeholder, 0)
     tokens_per_sequence = tf.reduce_sum(token_weights, axis=1)
@@ -104,6 +109,7 @@ class GraphMTLNetwork(BaseNetwork):
     aux_layers = []
     # rnn for main task specifically
     with tf.variable_scope('Maintask'):
+      layer = layer0
       for i in six.moves.range(self.n_layers):
         conv_width = self.first_layer_conv_width if not i else self.conv_width
         with tf.variable_scope('RNN-{}'.format(i)):
@@ -122,6 +128,7 @@ class GraphMTLNetwork(BaseNetwork):
           main_layers.append(layer)
     # shared rnn
     if self.share_rnn:
+      layer = layer0
       with tf.variable_scope('Share'):
         for i in six.moves.range(self.n_layers):
           conv_width = self.first_layer_conv_width if not i else self.conv_width
@@ -141,6 +148,10 @@ class GraphMTLNetwork(BaseNetwork):
             share_layers.append(layer)
     # rnn for aux tasks specifically
     for n in range(n_aux):
+      if self.aux_char:
+        layer = aux_layer0
+      else:
+        layer = layer0
       aux_layers.append([])
       with tf.variable_scope('Aux-%d' % n):
         for i in six.moves.range(self.n_layers):
