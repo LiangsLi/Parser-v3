@@ -251,6 +251,7 @@ class GraphMTLNetwork(BaseNetwork):
           self.get_aux_rnn_layers()
           with tf.variable_scope('Aux-%d' % n):
             l = self.aux_rnn_layers[n]
+            # use the specified layer of aux rnn and shared rnn
             if self.share_rnn:
               layer = tf.concat([aux_layers[n][l], share_layers[l]], -1)
             else:

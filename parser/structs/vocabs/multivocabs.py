@@ -122,7 +122,7 @@ class Multivocab(BaseVocab, list):
     #  assert len(set([vocab.embed_size for vocab in self])) == 1, "Unless Multivocab.combine_func is set to 'concat', all vocabs must have the same 'embed_size'"
     
     nonzero_init = True
-    with tf.variable_scope(self.field):
+    with tf.variable_scope(self.field) as scope:
       input_tensors = []
       if self._pretrained_vocabs:
         with tf.variable_scope('Pretrained') as variable_scope:
@@ -141,8 +141,8 @@ class Multivocab(BaseVocab, list):
           else:
             subtoken_layer, subtoken_aux_layer = self._subtoken_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., 
                                                   variable_scope=variable_scope, reuse=reuse, aux_char=aux_char)
-            input_tensors.append(subtoken_layer)
             aux_tensors = input_tensors + [subtoken_aux_layer]
+            input_tensors.append(subtoken_layer) 
           nonzero_init = False
       
       if self._token_vocab is not None:
@@ -154,6 +154,9 @@ class Multivocab(BaseVocab, list):
 
       layer = self.combine_func(input_tensors, embed_keep_prob=embed_keep_prob, drop_func=self.drop_func)
       if aux_char:
+        #print (input_tensors)
+        #print (aux_tensors)
+        scope.reuse_variables()
         aux_layer = self.combine_func(aux_tensors, embed_keep_prob=embed_keep_prob, drop_func=self.drop_func)
         return layer, aux_layer
     return layer
