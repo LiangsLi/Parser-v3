@@ -114,7 +114,7 @@ class Multivocab(BaseVocab, list):
     return status
   
   #=============================================================
-  def get_input_tensor(self, reuse=True):
+  def get_input_tensor(self, reuse=True, aux_char=False):
     """"""
     
     embed_keep_prob = 1 if reuse else self.embed_keep_prob
@@ -136,14 +136,26 @@ class Multivocab(BaseVocab, list):
       
       if self._subtoken_vocab is not None:
         with tf.variable_scope('Subtoken') as variable_scope:
-          input_tensors.append(self._subtoken_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., variable_scope=variable_scope, reuse=reuse))
+          if not aux_char:
+            input_tensors.append(self._subtoken_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., variable_scope=variable_scope, reuse=reuse))
+          else:
+            subtoken_layer, subtoken_aux_layer = self._subtoken_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., 
+                                                  variable_scope=variable_scope, reuse=reuse, aux_char=aux_char)
+            input_tensors.append(subtoken_layer)
+            aux_tensors = input_tensors + [subtoken_aux_layer]
           nonzero_init = False
       
       if self._token_vocab is not None:
         with tf.variable_scope('Token') as variable_scope:
-          input_tensors.append(self._token_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., variable_scope=variable_scope, reuse=reuse))
-      
+          token_layer = self._token_vocab.get_input_tensor(nonzero_init=nonzero_init, embed_keep_prob=1., variable_scope=variable_scope, reuse=reuse)
+          input_tensors.append(token_layer)
+        if aux_char:
+          aux_tensors.append(token_layer)
+
       layer = self.combine_func(input_tensors, embed_keep_prob=embed_keep_prob, drop_func=self.drop_func)
+      if aux_char:
+        aux_layer = self.combine_func(aux_tensors, embed_keep_prob=embed_keep_prob, drop_func=self.drop_func)
+        return layer, aux_layer
     return layer
   
   #=============================================================

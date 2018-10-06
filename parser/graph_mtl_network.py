@@ -55,11 +55,27 @@ class GraphMTLNetwork(BaseNetwork):
             pos_tensors = [pos_tensors]
         input_tensors = non_pos_tensors + pos_tensors
       else:
-        input_tensors = [input_vocab.get_input_tensor(reuse=reuse) for input_vocab in self.input_vocabs]
+        input_tensors = []
+        aux_tensors = [] 
+        if self.aux_char:
+          for vocab in self.input_vocabs:
+            if vocab.classname is 'FormMultivocab':
+              tensor, aux_tensor = vocab.get_input_tensor(reuse=reuse, aux_char=self.aux_char)
+              input_tensors.append(tensor)
+              aux_tensors.append(aux_tensor)
+            else:
+              tensor = vocab.get_input_tensor(reuse=reuse)
+              input_tensors.append(tensor)
+              aux_tensors.append(tensor)
+        else:
+          input_tensors = [input_vocab.get_input_tensor(reuse=reuse) for input_vocab in self.input_vocabs]
+          #print ([v.classname for v in self.input_vocabs])
       for input_network, output in input_network_outputs:
         with tf.variable_scope(input_network.classname):
           input_tensors.append(input_network.get_input_tensor(output, reuse=reuse))
       layer = tf.concat(input_tensors, 2)
+      if self.aux_char:
+        aux_layer = tf.concat(aux_tensors, 2)
 
     n_nonzero = tf.to_float(tf.count_nonzero(layer, axis=-1, keep_dims=True))
     batch_size, bucket_size, input_size = nn.get_sizes(layer)
@@ -344,6 +360,9 @@ class GraphMTLNetwork(BaseNetwork):
   @property
   def aux_label(self):
     return self._config.getboolean(self, 'aux_label')
+  @property
+  def aux_char(self):
+    return self._config.getboolean(self, 'aux_char')
   @property
   def share_rnn(self):
     return self._config.getboolean(self, 'share_rnn')
