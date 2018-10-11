@@ -5,3 +5,4 @@ from parser.parser_network import ParserNetwork
 from parser.tagger_network import TaggerNetwork
 from parser.graph_parser_network import GraphParserNetwork
 from parser.graph_mtl_network import GraphMTLNetwork
+from parser.graph_stacked_mtl_network import GraphStackedMTLNetwork
