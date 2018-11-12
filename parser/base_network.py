@@ -317,7 +317,7 @@ class BaseNetwork(object):
               start_time = time.time()
               feed_dict = trainset.set_placeholders(batch)
               #---
-              if current_step < 10:
+              if current_step < 1:
                 _, train_scores = sess.run(train_tensors, feed_dict=feed_dict, options=options, run_metadata=run_metadata)
                 fetched_timeline = timeline.Timeline(run_metadata.step_stats)
                 chrome_trace = fetched_timeline.generate_chrome_trace_format()
