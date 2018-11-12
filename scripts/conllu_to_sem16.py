@@ -26,6 +26,8 @@ def conllu_to_sem16(conllu_filename):
               nodes = items[8].split('|')
               for node in nodes:
                 words = items
+                # copy xpos to upos
+                words[3] = words[4]
                 node = node.split(':', 1)
                 node[0] = int(node[0])
                 words[6], words[7], words[8] = str(node[0]), node[1], '_'
