@@ -34,6 +34,7 @@ import tensorflow as tf
 
 from parser.neural import nn
 from scripts.chuliu_edmonds import chuliu_edmonds_one_root
+from scripts.mst import nonprojective
 
 #***************************************************************
 class GraphOutputs(object):
@@ -182,7 +183,8 @@ class GraphOutputs(object):
         for i, (_dephead_probs, length) in enumerate(zip(dephead_probs, lengths)):
           #print(_dephead_probs)
           #input()
-          cle = chuliu_edmonds_one_root(_dephead_probs[:length, :length])
+          #cle = chuliu_edmonds_one_root(_dephead_probs[:length, :length])
+          cle = nonprojective(_dephead_probs[:length, :length])
           dephead_preds[i, :length] = cle
         # ()
         bucket_size = dephead_preds.shape[1]
