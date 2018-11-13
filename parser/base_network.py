@@ -50,6 +50,7 @@ class BaseNetwork(object):
 
     with Timer('Initializing the network (including pretrained vocab)'):
       self._config = config
+      self._use_elmo = False
       #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
       self._input_networks = input_networks
@@ -568,6 +569,9 @@ class BaseNetwork(object):
   @property
   def other_save_dirs(self):
     return self._config.getlist(self, 'other_save_dirs')
+  @property
+  def use_elmo(self):
+    return self._use_elmo
   @property
   def vocabs(self):
     return self._vocabs
