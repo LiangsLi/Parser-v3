@@ -144,7 +144,10 @@ class ElmoVocab(SetVocab):
           for sid, sent in enumerate(self.iter_sents(self._dev_conllus)):
             sent_ = '\t'.join(sent)
             sent_ = sent_.replace('/', '$backslash$').replace('.', '$period$')
-            elmo = f[sent_].value
+            try:
+              elmo = f[sent_].value
+            except:
+              raise ValueError(sent)
             assert(len(elmo) == len(sent))
             embeddings.extend(elmo)
             for wid in range(len(sent)):

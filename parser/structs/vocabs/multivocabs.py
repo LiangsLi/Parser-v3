@@ -78,6 +78,7 @@ class Multivocab(BaseVocab, list):
 
     # Set up the elmo vocab(s)
     use_elmo_vocab = config.getboolean(self, 'use_elmo_vocab')
+    self.use_elmo_vocab = use_elmo_vocab
     if use_elmo_vocab:
       elmo_vocabs = [self._elmo_vocab_class(config=config)]
       self.extend(elmo_vocabs)

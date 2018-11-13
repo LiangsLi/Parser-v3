@@ -199,7 +199,8 @@ class CoNLLUDataset(set):
         elif buff:
           yield buff
           buff = []
-      yield buff
+      if buff:
+        yield buff
   
   #=============================================================
   @property
