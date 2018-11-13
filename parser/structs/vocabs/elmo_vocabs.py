@@ -76,7 +76,7 @@ class ElmoVocab(SetVocab):
     with tf.variable_scope(variable_scope or self.field):
       if self.variable is None:
         with tf.device('/cpu:0'):
-          self.variable = tf.Variable(self.embeddings, name=self.name+'Elmo', trainable=False)
+          self.variable = tf.Variable(self.embed_placeholder, name=self.name+'Elmo', trainable=False)
           tf.add_to_collection('non_save_variables', self.variable)
       layer = embeddings.pretrained_embedding_lookup(self.variable, self.linear_size,
                                                      self.placeholder,
@@ -155,7 +155,9 @@ class ElmoVocab(SetVocab):
       embeddings = np.stack(embeddings)
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
       self._embeddings = np.stack(embeddings)
+      shape = self._embeddings.shape
       self._embed_size = embeddings.shape[1]
+      self._embed_placeholder = tf.placeholder(tf.float32, shape=[shape[0], shape[1]])
     except:
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
@@ -192,6 +194,9 @@ class ElmoVocab(SetVocab):
   @property
   def embeddings(self):
     return self._embeddings
+  @property
+  def embed_placeholder(self):
+    return self._embed_placeholder
   @property
   def embed_keep_prob(self):
     return self._config.getfloat(self, 'max_embed_count')
