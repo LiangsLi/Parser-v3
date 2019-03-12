@@ -1,0 +1,20 @@
+1	人类	人类	NN	NN	_	2	Host	2:Host	_
+2	生活	生活	NN	NN	_	4	Exp	4:Exp|6:Exp	_
+3	的	的	DEG	DEG	_	2	mAux	2:mAux	_
+4	舒适	舒适	AN	AN	_	6	eCoo	6:eCoo	_
+5	和	和	CC	CC	_	6	mConj	6:mConj	_
+6	方便	方便	AN	AN	_	17	Cont	17:Cont	_
+7	，	，	PU	PU	_	6	mPunc	6:mPunc	_
+8	是	是	AD	AD	_	17	mMod	17:mMod	_
+9	连	连	AD	AD	_	13	mMod	13:mMod	_
+10	过去	过去	NT	NT	_	13	Time	13:Time	_
+11	的	的	DEG	DEG	_	10	mAux	10:mAux	_
+12	王公	王公	NN	NN	_	13	eCoo	13:eCoo	_
+13	贵族	贵族	NN	NN	_	17	Aft	17:Aft	_
+14	也	也	AD	AD	_	17	mMod	17:mMod	_
+15	不	不	AD	AD	_	16	mNeg	16:mNeg	_
+16	敢	敢	VV	VV	_	17	mMod	17:mMod	_
+17	想	想	VV	VV	_	20	Root	20:Root	_
+18	的	的	SP	SP	_	17	mTone	17:mTone	_
+19	。	。	PU	PU	_	17	mPunc	17:mPunc	_
+

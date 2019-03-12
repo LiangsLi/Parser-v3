@@ -11,3 +11,6 @@ saves/
 
 # Debug information
 *.log
+
+#Pycharm
+.idea/

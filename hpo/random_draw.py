@@ -6,59 +6,60 @@ from mpl_toolkits.mplot3d import Axes3D
 
 n = 200
 d = 3
-B = sps.truncnorm.rvs(0,1,loc=.25, scale=.5,size=[100,d])
+B = sps.truncnorm.rvs(0, 1, loc=.25, scale=.5, size=[100, d])
 D = B
-for i in range(1, n+1):
-  accepted = False
-  added = False
-  attempts = 0
-  best = None
-  best_p = 0
-  while not accepted:
-    b = np.random.rand(d)
-    if not added:
-      D = np.concatenate([D, b.reshape([1,-1])])
-      added = True
-    C = B
-    mins = []
-    maxes = []
-    for j in range(d):
-      drange = 1/np.power(i+1, 1/d)
-      lower_bound = b[j]-.5*drange
-      upper_bound = b[j]+.5*drange
-      dmin = max(0, lower_bound - max(0, upper_bound-1))
-      dmax = min(1, upper_bound - min(0, lower_bound))
-      mins.append(dmin)
-      maxes.append(dmax)
-      C = C[np.where(np.greater(C[:,j], mins[-1]) * np.less(C[:,j], maxes[-1]))]
-    n = len(C)
-    if n == 0:
-      accepted = True
-    else:
-      mins = np.array(mins)
-      maxes = np.array(maxes)
-      volume = np.prod(maxes-mins)
-      lamda = (i+1)*volume
-      p = sps.poisson.sf(n, lamda)
-      accepted = sps.bernoulli.rvs(p)
-      if not accepted:
-        attempts += 1
-        print('{:d}) Vol: {:.2f}\tP: {:.2e}\tAttempts: {:d}\tStatus: {}'.format(i, volume*(i+1), p, attempts, 'REJECTED'))
-        if p > best_p:
-          best = b
-          best_p = best_p
-        if attempts == 15:
-          accepted = True
-          b = best
-  B = np.concatenate([B, b.reshape([1,-1])])
+for i in range(1, n + 1):
+    accepted = False
+    added = False
+    attempts = 0
+    best = None
+    best_p = 0
+    while not accepted:
+        b = np.random.rand(d)
+        if not added:
+            D = np.concatenate([D, b.reshape([1, -1])])
+            added = True
+        C = B
+        mins = []
+        maxes = []
+        for j in range(d):
+            drange = 1 / np.power(i + 1, 1 / d)
+            lower_bound = b[j] - .5 * drange
+            upper_bound = b[j] + .5 * drange
+            dmin = max(0, lower_bound - max(0, upper_bound - 1))
+            dmax = min(1, upper_bound - min(0, lower_bound))
+            mins.append(dmin)
+            maxes.append(dmax)
+            C = C[np.where(np.greater(C[:, j], mins[-1])
+                           * np.less(C[:, j], maxes[-1]))]
+        n = len(C)
+        if n == 0:
+            accepted = True
+        else:
+            mins = np.array(mins)
+            maxes = np.array(maxes)
+            volume = np.prod(maxes - mins)
+            lamda = (i + 1) * volume
+            p = sps.poisson.sf(n, lamda)
+            accepted = sps.bernoulli.rvs(p)
+            if not accepted:
+                attempts += 1
+                print('{:d}) Vol: {:.2f}\tP: {:.2e}\tAttempts: {:d}\tStatus: {}'.format(
+                    i, volume * (i + 1), p, attempts, 'REJECTED'))
+                if p > best_p:
+                    best = b
+                    best_p = best_p
+                if attempts == 15:
+                    accepted = True
+                    b = best
+    B = np.concatenate([B, b.reshape([1, -1])])
 
-fig = plt.figure(figsize=[12,6])
+fig = plt.figure(figsize=[12, 6])
 ax = fig.add_subplot(121, projection='3d')
-ax.scatter(D[:,0], D[:,1], D[:,2])
+ax.scatter(D[:, 0], D[:, 1], D[:, 2])
 ax = fig.add_subplot(122, projection='3d')
-ax.scatter(B[:,0], B[:,1], B[:,2])
+ax.scatter(B[:, 0], B[:, 1], B[:, 2])
 plt.show()
-
 
 
 #n = 100
@@ -66,7 +67,7 @@ plt.show()
 #A = np.random.uniform(-1,1, size=[n,d])
 #B = A[:1]
 #D = A[:1]
-#for i in range(1,n+1):
+# for i in range(1,n+1):
 #  b = np.random.uniform(-1,1, size=d)
 #  C = np.array(B)
 #  D = np.concatenate([D, b.reshape([1,-1])])
@@ -101,17 +102,17 @@ plt.show()
 #  best = np.mean(bests, axis=0)
 #  #best = np.mean([best, b], axis=0)
 #  B = np.concatenate([B, best.reshape([1,-1])])
-#  
+#
 #fig, (ax1, ax2) = plt.subplots(1,2, figsize=(8,4))
 #ax1.scatter(B[:,0], B[:,1], alpha=.5)
-#ax1.set_xlim([-1,1])
-#ax1.set_ylim([-1,1])
+# ax1.set_xlim([-1,1])
+# ax1.set_ylim([-1,1])
 #ax2.scatter(D[:,0], D[:,1], alpha=.5)
-#ax2.set_xlim([-1,1])
-#ax2.set_ylim([-1,1])
-#plt.show()
-  
-  
+# ax2.set_xlim([-1,1])
+# ax2.set_ylim([-1,1])
+# plt.show()
+
+
 #  BTB = B.T.dot(B)
 #  centered_B = B - np.mean(B, axis=0, keepdims=True)
 #  BTB = centered_B.T.dot(centered_B)
