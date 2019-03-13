@@ -1,0 +1,17 @@
+---------------statistic info---------------
+puncuation ingoring mode  : chen2014ch
+total gold rels : 31645
+total test rels : 33277
+total right heads : 28737
+total right deprels : 24934
+total gold non-local : 3772
+total test non-local : 5404
+total right head(non-local) : 3214
+total right deprels(non-local) : 2698
+total sentence : 3073
+total sentence with right head : 1465
+total sentence with right label : 753
+---------------------------------------------
+TP: 24934, FP: 8343, FN: 6711
+    LP        LR        LF       NLF        UP        UR        UF       NUF        LM        UM    
+  74.93%    78.79%    76.81%    58.81%    86.36%    90.81%    88.53%    70.05%    24.50%    47.67%  

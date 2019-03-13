@@ -3,9 +3,10 @@
 
 ##########################################################################
 #  Official Evaluation Script for Semeval2016 Task9 Chinese Semantic Dependency Parsing    #
-#  Version : 1.0                                                                           #
+#  Version : 1.1                                                                           #
 #  Author  : Xu , Wei ( based on scripts for Dependency Parsing written by Liu , Yijia)    #
-#  BUG Report : wxu@ir.hit.edu.cn                                                          #
+#  BUG Report : wxu@ir.hit.edu.cn
+#  Python3 version
 ##########################################################################
 
 import sys
@@ -16,8 +17,8 @@ from argparse import ArgumentParser
 INF = float('inf')
 opts = None
 engine = None
-UNICODEPUNC = dict.fromkeys(i for i in xrange(sys.maxunicode)
-                            if unicodedata.category(unichr(i)).startswith('P'))
+UNICODEPUNC = dict.fromkeys(i for i in range(sys.maxunicode)
+                            if unicodedata.category(chr(i)).startswith('P'))
 
 
 def stat_one_tree(lines):
@@ -25,7 +26,7 @@ def stat_one_tree(lines):
     for line in lines:
         payload = line.strip().split("\t")
         if(len(payload) < 7):
-            print lines
+            print(lines)
         id_val = int(payload[0])
         form_val = payload[1]
         postag_val = payload[3]
@@ -213,7 +214,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--debug",
         dest="debug",
-        default=False,
+        default=True,
         action="store_true",
         help="if set , statistic info will be output . default not set.")
     opts = parser.parse_args()
@@ -258,8 +259,8 @@ if __name__ == "__main__":
         print >> sys.stderr, "valid language : { universal[default] , en , ch , chen2014en , chen2014ch }"
         sys.exit(1)
 
-    reference_dataset = open(opts.reference, "r").read().strip().split("\n\n")
-    answer_dataset = open(opts.answer, "r").read().strip().split("\n\n")
+    reference_dataset = open(opts.reference, "r",encoding='utf-8').read().strip().split("\n\n")
+    answer_dataset = open(opts.answer, "r",encoding='utf-8').read().strip().split("\n\n")
 
     assert len(reference_dataset) == len(
         answer_dataset), "Number of instance unequal."
@@ -352,22 +353,22 @@ if __name__ == "__main__":
     UM = float(nr_right_sentence_head) / \
         nr_sentence if nr_sentence != 0 else INF
     if opts.debug:
-        print "{0}{1}{0}".format("-" * 15, "statistic info")
-        print "puncuation ingoring mode  : {0}".format(opts.language)
-        print "total gold rels : {0}".format(nr_total_gold_rels)
-        print "total test rels : {0}".format(nr_total_test_rels)
-        print "total right heads : {0}".format(nr_total_right_heads)
-        print "total right deprels : {0}".format(nr_total_right_deprels)
-        print "total gold non-local : {0}".format(nr_total_gold_non_local)
-        print "total test non-local : {0}".format(nr_total_test_non_local)
-        print "total right head(non-local) : {0}".format(nr_total_right_heads_non_local)
-        print "total right deprels(non-local) : {0}".format(nr_total_right_deprel_non_local)
-        print "total sentence : {0}".format(nr_sentence)
-        print "total sentence with right head : {0}".format(nr_right_sentence_head)
-        print "total sentence with right label : {0}".format(nr_right_sentence_deprel)
-        print "{0}{0}{0}".format("-" * 15)
-    print "TP: {}, FP: {}, FN: {}".format(TP, FP, FN)
-    print "{0:^10}{1:^10}{2:^10}{3:^10}{4:^10}{5:^10}{6:^10}{7:^10}{8:^10}{9:^10}".format(
-        "LP", "LR", "LF", "NLF", "UP", "UR", "UF", "NUF", "LM", "UM")
-    print "{0[0]:^10}{0[1]:^10}{0[2]:^10}{0[3]:^10}{0[4]:^10}{0[5]:^10}{0[6]:^10}{0[7]:^10}{0[8]:^10}{0[9]:^10}".format(
-        map(lambda x: "{:.2f}%".format(x * 100), [LP, LR, LF, NLF, UP, UR, UF, NUF, LM, UM]))
+        print("{0}{1}{0}".format("-" * 15, "statistic info"))
+        print("puncuation ingoring mode  : {0}".format(opts.language))
+        print("total gold rels : {0}".format(nr_total_gold_rels))
+        print("total test rels : {0}".format(nr_total_test_rels))
+        print("total right heads : {0}".format(nr_total_right_heads))
+        print("total right deprels : {0}".format(nr_total_right_deprels))
+        print("total gold non-local : {0}".format(nr_total_gold_non_local))
+        print("total test non-local : {0}".format(nr_total_test_non_local))
+        print("total right head(non-local) : {0}".format(nr_total_right_heads_non_local))
+        print("total right deprels(non-local) : {0}".format(nr_total_right_deprel_non_local))
+        print("total sentence : {0}".format(nr_sentence))
+        print("total sentence with right head : {0}".format(nr_right_sentence_head))
+        print("total sentence with right label : {0}".format(nr_right_sentence_deprel))
+        print("{0}{0}{0}".format("-" * 15))
+    print("TP: {}, FP: {}, FN: {}".format(TP, FP, FN))
+    print("{0:^10}{1:^10}{2:^10}{3:^10}{4:^10}{5:^10}{6:^10}{7:^10}{8:^10}{9:^10}".format(
+        "LP", "LR", "LF", "NLF", "UP", "UR", "UF", "NUF", "LM", "UM"))
+    print("{0[0]:^10}{0[1]:^10}{0[2]:^10}{0[3]:^10}{0[4]:^10}{0[5]:^10}{0[6]:^10}{0[7]:^10}{0[8]:^10}{0[9]:^10}".format(
+        list(map(lambda x: "{:.2f}%".format(x * 100), [LP, LR, LF, NLF, UP, UR, UF, NUF, LM, UM]))))
