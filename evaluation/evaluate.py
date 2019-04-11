@@ -25,7 +25,7 @@ def stat_one_tree(lines):
     stat_data = {}
     for line in lines:
         payload = line.strip().split("\t")
-        if(len(payload) < 7):
+        if (len(payload) < 7):
             print(lines)
         id_val = int(payload[0])
         form_val = payload[1]
@@ -42,7 +42,7 @@ def stat_one_tree(lines):
                 "deprels": [deprel_val]
             }
         else:
-            assert(form_val == stat_data[id_val]["form"])
+            assert (form_val == stat_data[id_val]["form"])
             stat_data[id_val]["heads"].append(head_val)
             stat_data[id_val]['deprels'].append(deprel_val)
     return stat_data
@@ -66,10 +66,10 @@ def stat_one_node_heads_and_deprels(
 
     is_head_right = True  # ! set default True . The default value is important : `if the state is not changed , we'll not set it value any more`
     is_deprel_right = True  # ! set default True
-    assert(gold_len != 0 and test_len != 0)
+    assert (gold_len != 0 and test_len != 0)
     if gold_len == 1 and test_len == 1:
-        #! normal situation
-        if(gold_heads[0] == test_heads[0]):
+        # ! normal situation
+        if (gold_heads[0] == test_heads[0]):
             nr_right_heads = 1
             if gold_deprels[0] == test_deprels[0]:
                 nr_right_deprels = 1
@@ -80,17 +80,17 @@ def stat_one_node_heads_and_deprels(
             # ! Attention . If head is wrong , deprel should be set to wrong .
             is_deprel_right = False
     else:
-        #! Non local  situation
+        # ! Non local  situation
         if gold_len > 1:
             is_gold_non_local = True
         nr_non_local_gold = gold_len
         nr_non_local_test = test_len
-        #! for Non local , if len(test_heads) !=  len(gold_heads) , the node 's head and deprels is  not right
+        # ! for Non local , if len(test_heads) !=  len(gold_heads) , the node 's head and deprels is  not right
         if nr_non_local_gold != nr_non_local_test:
             is_deprel_right = False
             is_head_right = False
-        #! find the right non-local head and deprel
-        #! if has wrong head or deprel , set the `is_head_right` or `is_deprel_right` to `False`
+        # ! find the right non-local head and deprel
+        # ! if has wrong head or deprel , set the `is_head_right` or `is_deprel_right` to `False`
         for gold_head, gold_deprel in zip(gold_heads, gold_deprels):
             if gold_head in test_heads:
                 nr_right_heads += 1
@@ -103,7 +103,7 @@ def stat_one_node_heads_and_deprels(
             else:
                 is_head_right = False
                 is_deprel_right = False  # !
-        #! here no local state equals to normal state
+        # ! here no local state equals to normal state
         nr_non_local_right_heads = nr_right_heads
         nr_non_local_right_deprels = nr_right_deprels
 
@@ -137,7 +137,7 @@ def stat_gold_and_test_data(gold_stat_data, test_stat_data):
     for idx in gold_stat_data.keys():
         gold_node = gold_stat_data[idx]
         test_node = test_stat_data[idx]
-        assert(gold_node['id'] == test_node['id'])
+        assert (gold_node['id'] == test_node['id'])
 
         (
             gold_rels_len,
@@ -222,45 +222,50 @@ if __name__ == "__main__":
     if opts.language == "en":
         # English punctuation list is obtained from
         # http://en.wikipedia.org/wiki/Punctuation_of_English
-        def engine(x, y): return x in ("'", "''",  # apostrophe
-                                       # brackets
-                                       "(", ")", "[", "]", "{", "}", "-LRB-", "-RRB-", "-LSB-", "-RSB-", "-LCB-", "-RCB-",
-                                       ":",  # colon
-                                       ",",  # comma
-                                       "-", "--",  # dash
-                                       "...",  # ellipsis
-                                       "!",  # exclamation mark
-                                       ".",  # full stop
-                                       "\"", "``", "`",  # quotation marks
-                                       ";",  # semicolon
-                                       "?"  # question mark
-                                       ) or x == opts.ignore
+        def engine(x, y):
+            return x in ("'", "''",  # apostrophe
+                         # brackets
+                         "(", ")", "[", "]", "{", "}", "-LRB-", "-RRB-", "-LSB-", "-RSB-", "-LCB-", "-RCB-",
+                         ":",  # colon
+                         ",",  # comma
+                         "-", "--",  # dash
+                         "...",  # ellipsis
+                         "!",  # exclamation mark
+                         ".",  # full stop
+                         "\"", "``", "`",  # quotation marks
+                         ";",  # semicolon
+                         "?"  # question mark
+                         ) or x == opts.ignore
     elif opts.language == "ch":
-        def engine(x, y): return x in (
-            "锛�", "锛�",
-            "銆�", "銆�", "锛�",
-            "锛�",
-            "锛�",
-            "鈥�", "锛�", "锛�", "锛�", "锛�",
-            "鈥�", "鈥�", "鈥�", "鈥�",
-            "銆�", "銆�", "銆�", "銆�", "銆�", "銆�", "銆�", "銆�",
-            "涓€涓€", "鈥曗€�", "鈥�",
-        ) or x == opts.ignore
+        def engine(x, y):
+            return x in (
+                "锛�", "锛�",
+                "銆�", "銆�", "锛�",
+                "锛�",
+                "锛�",
+                "鈥�", "锛�", "锛�", "锛�", "锛�",
+                "鈥�", "鈥�", "鈥�", "鈥�",
+                "銆�", "銆�", "銆�", "銆�", "銆�", "銆�", "銆�", "銆�",
+                "涓€涓€", "鈥曗€�", "鈥�",
+            ) or x == opts.ignore
     elif opts.language == "universal":
         def engine(
-            x, y): return len(
-            x.decode("utf-8").translate(UNICODEPUNC)) == 0 or x == opts.ignore
+                x, y):
+            return len(
+                x.decode("utf-8").translate(UNICODEPUNC)) == 0 or x == opts.ignore
     elif opts.language == "chen2014en":
-        def engine(x, y): return y in set(["''", "``", ",", ".", ":"])
+        def engine(x, y):
+            return y in set(["''", "``", ",", ".", ":"])
     elif opts.language == "chen2014ch":
-        def engine(x, y): return y in set(['PU'])
+        def engine(x, y):
+            return y in set(['PU'])
     else:
         print >> sys.stderr, "Unknown language"
         print >> sys.stderr, "valid language : { universal[default] , en , ch , chen2014en , chen2014ch }"
         sys.exit(1)
 
-    reference_dataset = open(opts.reference, "r",encoding='utf-8').read().strip().split("\n\n")
-    answer_dataset = open(opts.answer, "r",encoding='utf-8').read().strip().split("\n\n")
+    reference_dataset = open(opts.reference, "r", encoding='utf-8').read().strip().split("\n\n")
+    answer_dataset = open(opts.answer, "r", encoding='utf-8').read().strip().split("\n\n")
 
     assert len(reference_dataset) == len(
         answer_dataset), "Number of instance unequal."
@@ -288,7 +293,7 @@ if __name__ == "__main__":
 
         reference_stat_data = stat_one_tree(reference_lines)
         answer_stat_data = stat_one_tree(answer_lines)
-        assert(len(reference_stat_data) == len(answer_stat_data))
+        assert (len(reference_stat_data) == len(answer_stat_data))
 
         (nr_one_gold_rels,
          nr_one_test_rels,
@@ -318,40 +323,44 @@ if __name__ == "__main__":
             nr_right_sentence_deprel += 1
 
     LP = float(nr_total_right_deprels) / \
-        nr_total_test_rels if nr_total_test_rels != 0 else INF
+         nr_total_test_rels if nr_total_test_rels != 0 else INF
     LR = float(nr_total_right_deprels) / \
-        nr_total_gold_rels if nr_total_gold_rels != 0 else INF
+         nr_total_gold_rels if nr_total_gold_rels != 0 else INF
     LF = float(2 * nr_total_right_deprels) / (nr_total_test_rels +
-                                              nr_total_gold_rels) if (nr_total_gold_rels + nr_total_test_rels) != 0 else INF
+                                              nr_total_gold_rels) if (
+                                                                             nr_total_gold_rels + nr_total_test_rels) != 0 else INF
     TP = nr_total_right_deprels
     FP = nr_total_test_rels - nr_total_right_deprels
     FN = nr_total_gold_rels - nr_total_right_deprels
 
     NLP = float(nr_total_right_deprel_non_local) / \
-        nr_total_test_non_local if nr_total_test_non_local != 0 else INF
+          nr_total_test_non_local if nr_total_test_non_local != 0 else INF
     NLR = float(nr_total_right_deprel_non_local) / \
-        nr_total_gold_non_local if nr_total_gold_non_local != 0 else INF
+          nr_total_gold_non_local if nr_total_gold_non_local != 0 else INF
     NLF = float(2 * nr_total_right_deprel_non_local) / (nr_total_test_non_local +
-                                                        nr_total_gold_non_local) if (nr_total_test_non_local + nr_total_gold_non_local) != 0 else INF
+                                                        nr_total_gold_non_local) if (
+                                                                                            nr_total_test_non_local + nr_total_gold_non_local) != 0 else INF
 
     UP = float(nr_total_right_heads) / \
-        nr_total_test_rels if nr_total_test_rels != 0 else INF
+         nr_total_test_rels if nr_total_test_rels != 0 else INF
     UR = float(nr_total_right_heads) / \
-        nr_total_gold_rels if nr_total_gold_rels != 0 else INF
+         nr_total_gold_rels if nr_total_gold_rels != 0 else INF
     UF = float(2 * nr_total_right_heads) / (nr_total_test_rels + \
-               nr_total_gold_rels) if (nr_total_gold_rels + nr_total_test_rels) != 0 else INF
+                                            nr_total_gold_rels) if (
+                                                                           nr_total_gold_rels + nr_total_test_rels) != 0 else INF
 
     NUP = float(nr_total_right_heads_non_local) / \
-        nr_total_test_non_local if nr_total_test_non_local != 0 else INF
+          nr_total_test_non_local if nr_total_test_non_local != 0 else INF
     NUR = float(nr_total_right_heads_non_local) / \
-        nr_total_gold_non_local if nr_total_gold_non_local != 0 else INF
+          nr_total_gold_non_local if nr_total_gold_non_local != 0 else INF
     NUF = float(2 * nr_total_right_heads_non_local) / (nr_total_test_non_local +
-                                                       nr_total_gold_non_local) if (nr_total_test_non_local + nr_total_gold_non_local) != 0 else INF
+                                                       nr_total_gold_non_local) if (
+                                                                                           nr_total_test_non_local + nr_total_gold_non_local) != 0 else INF
 
     LM = float(nr_right_sentence_deprel) / \
-        nr_sentence if nr_sentence != 0 else INF
+         nr_sentence if nr_sentence != 0 else INF
     UM = float(nr_right_sentence_head) / \
-        nr_sentence if nr_sentence != 0 else INF
+         nr_sentence if nr_sentence != 0 else INF
     if opts.debug:
         print("{0}{1}{0}".format("-" * 15, "statistic info"))
         print("puncuation ingoring mode  : {0}".format(opts.language))
