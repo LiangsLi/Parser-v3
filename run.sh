@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Checking virtualenv
 if [[ ! -f "env/bin/activate" ]];then
   echo "Please first build virtualenv with setup.sh!"
@@ -34,6 +35,8 @@ if [[ ! -d outputs ]];then
 fi
 source env/bin/activate
 CUDA_VISIBLE_DEVICES=$gpu python3 $main --save_dir $save run --output_dir $out $file #--other_save_dirs $other
+
+# python3 main.py --save_dir saves/sem16-v0 run --output_dir $2 data/$1.conllu
 
 tosem16=converter/conllu_to_sem16.py
 outfile=`basename $output`
