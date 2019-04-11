@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Checking virtualenv
-if [[ ! -f "env/bin/activate" ]];then
-  echo "Please first build virtualenv with setup.sh!"
-  exit
-fi
+#if [[ ! -f "env/bin/activate" ]];then
+#  echo "Please first build virtualenv with setup.sh!"
+#  exit
+#fi
 
 # Preprocessing
-if [[ ! -d "data/text-conllu" ]];then
-  mkdir data/text-conllu
-fi
-input=$1 #data/text-conll/text.test.conll
+#if [[ ! -d "data/text-conllu" ]];then
+#  mkdir data/text-conllu
+#fi
+input=data/text-conll/text.test.conll
 
-if [[ -z $1 || $1 == '-h' ]];then
-  echo "usage./run_self.sh input-file output-directory"
-  exit
-fi
+#if [[ -z $1 || $1 == '-h' ]];then
+#  echo "usage./run_self.sh input-file output-directory"
+#  exit
+#fi
 
 infile=`basename $input`
 output=data/$infile.conllu
