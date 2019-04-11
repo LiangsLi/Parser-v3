@@ -6,9 +6,10 @@
 #fi
 
 # Preprocessing
-#if [[ ! -d "data/text-conllu" ]];then
-#  mkdir data/text-conllu
-#fi
+if [[ ! -d "data/text-conllu" ]];then
+  mkdir data/text-conllu
+fi
+# 获取输入参数
 input=data/text-conll/text.test.conll
 
 #if [[ -z $1 || $1 == '-h' ]];then
@@ -17,15 +18,19 @@ input=data/text-conll/text.test.conll
 #fi
 
 infile=`basename $input`
-output=data/$infile.conllu
+# 输入文件转换格式 sem16 -> conllu
+output=$infile.conllu
 echo "Preprocessing the conll file"
 python converter/sem16_to_conllu.py $input $output
 
 main=main.py
 gpu=""
 #save=saves/text-0
-save=saves/sem16-v0
-out=$2
+# 模型参数保存的位置
+save=/mnt/data/lihuayong/ckps/parser_v3_wyx/sem16-v0 # E:/model_ckp/parser_v3_tf/sem16-v0
+# 获取输出文件参数
+out=.
+# $file是转换后的输入文件
 file=$output
 #other=saves/text-1:saves/text-2:saves/text-3:saves/text-4
 
@@ -33,11 +38,10 @@ file=$output
 if [[ ! -d outputs ]];then
   mkdir outputs
 fi
-source env/bin/activate
+#source env/bin/activate
 CUDA_VISIBLE_DEVICES=$gpu python3 $main --save_dir $save run --output_dir $out $file #--other_save_dirs $other
-
-# python3 main.py --save_dir saves/sem16-v0 run --output_dir $2 data/$1.conllu
 
 tosem16=converter/conllu_to_sem16.py
 outfile=`basename $output`
+# 最终输出转换为 sem16格式
 python $tosem16 $out/$outfile
