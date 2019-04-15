@@ -26,7 +26,7 @@ def to_conllu(sdp_filename, conllu_filename):
           elif int(items[0]) == len(words):
             words[-1][8] += '|'+items[6]+':'+items[7]
           else:
-            print "Error:{}".format(line)
+            print("Error:{}".format(line))
         for word in words:
           conllu_form.append('\t'.join(word))
         g.write('\n'.join(conllu_form) + '\n\n')

@@ -257,7 +257,69 @@ def hpo(**kwargs):
 
 # ===============================================================
 def run(**kwargs):
-    """"""
+    """
+    ----------run kwargs---------------
+        {'AMSGradOptimizer': None,
+         'BaseNetwork': None,
+         'BaseVocab': None,
+         'CoNLLUDataset': None,
+         'CoNLLUDevset': None,
+         'CoNLLUTestset': None,
+         'CoNLLUTrainset': None,
+         'CoNLLUVocab': None,
+         'Config': None,
+         'CountVocab': None,
+         'DEFAULT': None,
+         'DepheadIndexVocab': None,
+         'DepheadVocab': None,
+         'DeprelTokenVocab': None,
+         'DeprelVocab': None,
+         'ElmoNetwork': None,
+         'FeatureVocab': None,
+         'FormMultivocab': None,
+         'FormPretrainedVocab': None,
+         'FormSubtokenVocab': None,
+         'FormTokenVocab': None,
+         'FormVocab': None,
+         'GraphOutputs': None,
+         'IDIndexVocab': None,
+         'IndexVocab': None,
+         'LemmaFeatureVocab': None,
+         'LemmaSubtokenVocab': None,
+         'LemmaTokenVocab': None,
+         'LemmaVocab': None,
+         'Multivocab': None,
+         'Optimizer': None,
+         'ParserNetwork': None,
+         'PretrainedVocab': None,
+         'SemheadGraphIndexVocab': None,
+         'SemheadVocab': None,
+         'SemrelGraphTokenVocab': None,
+         'SemrelVocab': None,
+         'SetVocab': None,
+         'SubtokenVocab': None,
+         'TaggerNetwork': None,
+         'TokenVocab': None,
+         'UFeatsFeatureVocab': None,
+         'UFeatsVocab': None,
+         'UPOSTokenVocab': None,
+         'UPOSVocab': None,
+         'XPOSFeatureVocab': None,
+         'XPOSTokenVocab': None,
+         'XPOSVocab': None,
+         'conllu_files': ['text.test.conll.conllu'],
+         'elmo_test_filename': None,
+         'other_save_dirs': None,
+         'output_dir': '.',
+         'output_filename': None,
+         'save_dir': '/mnt/data/lihuayong/ckps/parser_v3_wyx/sem16-v0',
+         'save_metadir': None}
+        -----------------------------------
+
+
+    :param kwargs:
+    :return:
+    """
     from pprint import pprint
     print("----------run kwargs---------------")
     pprint(kwargs)
@@ -296,7 +358,10 @@ def run(**kwargs):
         kwargs['FormElmoVocab'] = {}
         kwargs['FormElmoVocab']['elmo_test_filename'] = elmo_test_filename
     print('----------------ELMO-------------------')
-    pprint(kwargs['FormElmoVocab'])
+    if elmo_test_filename:
+        pprint(kwargs['FormElmoVocab'])
+    else:
+        print('None')
     print('---------------------------------------')
 
     config = Config(defaults_file='', config_file=config_file, **kwargs)
@@ -312,6 +377,18 @@ def run(**kwargs):
     print('----------------------config---------------------')
     pprint(config)
     print('-------------------------------------------------\n')
+    """
+        ---------------kwargs--------------------
+        {}
+        -----------------------------------------
+        ----------------ELMO-------------------
+        ---------------------------------------
+        network class: GraphParserNetwork
+        network list: None
+        input networks: set()
+        networks: {}
+        NetworkClass: <class 'parser.graph_parser_network.GraphParserNetwork'>
+    """
     network = NetworkClass(input_networks=input_networks, config=config)
     network.parse(conllu_files, output_dir=output_dir, output_filename=output_filename)
     return

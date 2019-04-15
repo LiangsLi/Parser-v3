@@ -1,5 +1,6 @@
 # Compiled source binary
 *.pyc
+*.doc
 
 # Backup files
 *.old.py
@@ -7,6 +8,7 @@
 # Data directory
 data/
 saves/
+.idea/
 *.tar.gz
 
 # Debug information
