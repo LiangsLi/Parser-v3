@@ -111,6 +111,8 @@ class GraphParserNetwork(BaseNetwork):
         print(">>>>>>output_fields:")
         print(output_fields)
         print("output_fields<<<<<<")
+        # {'semhead': <parser.structs.vocabs.index_vocabs.SemheadGraphIndexVocab object >,
+        # 'semrel': <parser.structs.vocabs.token_vocabs.SemrelGraphTokenVocab object >}
         outputs = {}
         with tf.device('/gpu:1'):
             with tf.variable_scope('Classifiers'):

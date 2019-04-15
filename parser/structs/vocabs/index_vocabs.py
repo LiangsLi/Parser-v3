@@ -318,18 +318,19 @@ class GraphIndexVocab(IndexVocab):
     # =============================================================
     def get_bilinear_discriminator(self, layer, token_weights, variable_scope=None, reuse=False):
         """"""
-
+        print(">>>>>>get_bilinear_discriminator:")
         recur_layer = layer
         hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
         add_linear = self.add_linear
-        print("--->>>self.add_linear:", str(self.add_linear))
-        print("--->>>self.linearize", str(self.linearize))
-        print('--->>>self.distance', str(self.distance))
+        print("--->>>self.add_linear:", str(self.add_linear))   # True
+        print("--->>>self.linearize", str(self.linearize))  # False
+        print('--->>>self.distance', str(self.distance))    # False
         n_splits = 2 * (1 + self.linearize + self.distance)
-        print("--->>>n splits:", str(n_splits))
-        print("--->>>self.hidden_size", str(self.hidden_size))
+        print("--->>>n splits:", str(n_splits))     # 2
+        print("--->>>self.hidden_size", str(self.hidden_size))  # 600
         with tf.variable_scope(variable_scope or self.field):
-            print("--->>>self.n_layers:", str(self.n_layers))
+            print("--->>>self.n_layers:", str(self.n_layers))   # 1
+            # n_layers==1，不会进入下面的循环
             for i in six.moves.range(0, self.n_layers - 1):
                 with tf.variable_scope('FC-%d' % i):
                     # 连续多层全连接
@@ -342,13 +343,13 @@ class GraphIndexVocab(IndexVocab):
                                              hidden_keep_prob=hidden_keep_prob)
             layer1, layer2 = layers.pop(0), layers.pop(0)
 
-            if self.linearize:
+            if self.linearize:  # False
                 lin_layer1, lin_layer2 = layers.pop(0), layers.pop(0)
-            if self.distance:
+            if self.distance:   # False
                 dist_layer1, dist_layer2 = layers.pop(0), layers.pop(0)
 
             with tf.variable_scope('Discriminator'):
-                pront("--->>>self.diagonal:", str(self.diagonal))
+                print("--->>>self.diagonal:", str(self.diagonal))
                 if self.diagonal:
                     logits, _ = classifiers.diagonal_bilinear_discriminator(
                         layer1, layer2,
