@@ -58,9 +58,9 @@ class BaseNetwork(object):
             # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
             print(">>>>>>>>>>>>>>>>>BaseNetwork:")
             self._input_networks = input_networks
-            print(">>>self._input_networks:", str(input_networks))
+            print(">>>self._input_networks:", str(input_networks))   # set()
             input_network_classes = set(input_network.classname for input_network in self._input_networks)
-            print(">>>input_network_class:", str(input_network_classes))
+            print(">>>input_network_class:", str(input_network_classes))    # set()
             assert input_network_classes == set(
                 self.input_network_classes), 'Not all input networks were passed in to {}'.format(self.classname)
 
@@ -73,14 +73,14 @@ class BaseNetwork(object):
                             vocab.classname)
                     else:
                         extant_vocabs[vocab.classname] = vocab
-            print(">>>extant_vocabs:", str(extant_vocabs))
+            print(">>>extant_vocabs:", str(extant_vocabs))  # {}
 
             if 'IDIndexVocab' in extant_vocabs:
                 self._id_vocab = extant_vocabs['IDIndexVocab']
             else:
                 self._id_vocab = vocabs.IDIndexVocab(config=config)
                 extant_vocabs['IDIndexVocab'] = self._id_vocab
-            print(">>>self._id_vocab:", str(self._id_vocab))
+            print(">>>self._id_vocab:", str(self._id_vocab))    # parser.structs.vocabs.index_vocabs.IDIndexVocab
 
             self._input_vocabs = []
             for input_vocab_classname in self.input_vocab_classes:
@@ -93,6 +93,11 @@ class BaseNetwork(object):
                     self._input_vocabs.append(vocab)
                     extant_vocabs[input_vocab_classname] = vocab
             print(">>>self._input_vocabs:", str(self._input_vocabs))
+            # [[<parser.structs.vocabs.token_vocabs.FormTokenVocab object at 0x7f93f2b43c88>,
+            # <parser.structs.vocabs.subtoken_vocabs.FormSubtokenVocab object at 0x7f93f2b43a58>,
+            # <parser.structs.vocabs.pretrained_vocabs.FormPretrainedVocab object at 0x7f93f2b43f28>],
+            # <parser.structs.vocabs.token_vocabs.XPOSTokenVocab object at 0x7f93f2b43dd8>,
+            # <parser.structs.vocabs.token_vocabs.LemmaTokenVocab object at 0x7f93eb1d6ba8>]
 
             self._output_vocabs = []
             for output_vocab_classname in self.output_vocab_classes:
@@ -105,6 +110,8 @@ class BaseNetwork(object):
                     self._output_vocabs.append(vocab)
                     extant_vocabs[output_vocab_classname] = vocab
             print(">>>self._output_vocabs:", str(self._output_vocabs))
+            # [<parser.structs.vocabs.index_vocabs.SemheadGraphIndexVocab object at 0x7f93eb1d66d8>,
+            # <parser.structs.vocabs.token_vocabs.SemrelGraphTokenVocab object at 0x7f93eb1d6a90>]
 
             self._throughput_vocabs = []
             for throughput_vocab_classname in self.throughput_vocab_classes:
@@ -116,7 +123,7 @@ class BaseNetwork(object):
                     vocab.load() or vocab.count(self.train_conllus)
                     self._throughput_vocabs.append(vocab)
                     extant_vocabs[throughput_vocab_classname] = vocab
-            print('>>>self._throughput_vocabs:', str(self._throughput_vocabs))
+            print('>>>self._throughput_vocabs:', str(self._throughput_vocabs))  # []
 
             with tf.variable_scope(self.classname, reuse=False):
                 self.global_step = tf.Variable(0., trainable=False, name='Global_step')
@@ -428,8 +435,8 @@ class BaseNetwork(object):
                 factored_deptree = vocab.factorized
             elif vocab.field == 'semrel':
                 factored_semgraph = vocab.factorized
-        print(">>>factored_deptree:", str(factored_deptree))
-        print(">>>factored_semgraph:", str(factored_semgraph))
+        print(">>>factored_deptree:", str(factored_deptree))    # None
+        print(">>>factored_semgraph:", str(factored_semgraph))  # True
         with Timer('Building TF'):
             with tf.variable_scope(self.classname, reuse=False):
                 print(">>>>>>>>>>>>>>build_graph:")

@@ -90,7 +90,7 @@ class GraphParserNetwork(BaseNetwork):
         conv_keep_prob = 1. if reuse else self.conv_keep_prob
         recur_keep_prob = 1. if reuse else self.recur_keep_prob
         recur_include_prob = 1. if reuse else self.recur_include_prob
-
+        print(">>> RNN layer num:", str(self.n_layers))
         for i in six.moves.range(self.n_layers):
             conv_width = self.first_layer_conv_width if not i else self.conv_width
             with tf.variable_scope('RNN-{}'.format(i)):
@@ -108,21 +108,26 @@ class GraphParserNetwork(BaseNetwork):
                                                   bilin=self.bilin)
 
         output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
+        print(">>>>>>output_fields:")
+        print(output_fields)
+        print("output_fields<<<<<<")
         outputs = {}
         with tf.device('/gpu:1'):
             with tf.variable_scope('Classifiers'):
-                if 'semrel' in output_fields:
+                if 'semrel' in output_fields:  # True
                     print(">>> semrel")
                     vocab = output_fields['semrel']
                     if vocab.factorized:
-                        print(">>>vocab.factorized:",vocab.factorized)
+                        print(">>>vocab.factorized:", vocab.factorized)  # True
                         head_vocab = output_fields['semhead']
                         print(">>>head_vocab:", str(head_vocab))
+                        #  <parser.structs.vocabs.index_vocabs.SemheadGraphIndexVocab object at 0x7f93eb1d66d8>
                         with tf.variable_scope('Unlabeled'):
                             unlabeled_outputs = head_vocab.get_bilinear_discriminator(
                                 layer,
                                 token_weights=token_weights3D,
                                 reuse=reuse)
+                        print('>>>vocab:', str(vocab))
                         with tf.variable_scope('Labeled'):
                             labeled_outputs = vocab.get_bilinear_classifier(
                                 layer, unlabeled_outputs,

@@ -322,10 +322,17 @@ class GraphIndexVocab(IndexVocab):
         recur_layer = layer
         hidden_keep_prob = 1 if reuse else self.hidden_keep_prob
         add_linear = self.add_linear
+        print("--->>>self.add_linear:", str(self.add_linear))
+        print("--->>>self.linearize", str(self.linearize))
+        print('--->>>self.distance', str(self.distance))
         n_splits = 2 * (1 + self.linearize + self.distance)
+        print("--->>>n splits:", str(n_splits))
+        print("--->>>self.hidden_size", str(self.hidden_size))
         with tf.variable_scope(variable_scope or self.field):
+            print("--->>>self.n_layers:", str(self.n_layers))
             for i in six.moves.range(0, self.n_layers - 1):
                 with tf.variable_scope('FC-%d' % i):
+                    # 连续多层全连接
                     layer = classifiers.hidden(layer, n_splits * self.hidden_size,
                                                hidden_func=self.hidden_func,
                                                hidden_keep_prob=hidden_keep_prob)
@@ -334,12 +341,14 @@ class GraphIndexVocab(IndexVocab):
                                              hidden_func=self.hidden_func,
                                              hidden_keep_prob=hidden_keep_prob)
             layer1, layer2 = layers.pop(0), layers.pop(0)
+
             if self.linearize:
                 lin_layer1, lin_layer2 = layers.pop(0), layers.pop(0)
             if self.distance:
                 dist_layer1, dist_layer2 = layers.pop(0), layers.pop(0)
 
             with tf.variable_scope('Discriminator'):
+                pront("--->>>self.diagonal:", str(self.diagonal))
                 if self.diagonal:
                     logits, _ = classifiers.diagonal_bilinear_discriminator(
                         layer1, layer2,
