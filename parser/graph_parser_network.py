@@ -91,12 +91,17 @@ class GraphParserNetwork(BaseNetwork):
         recur_keep_prob = 1. if reuse else self.recur_keep_prob
         recur_include_prob = 1. if reuse else self.recur_include_prob
         print(">>> RNN layer num:", str(self.n_layers))  # 3
+        print(">>> RNN config:")
+        print("->>> recur_size:", str(self.recur_size))
+        print("->>> bidirectional", str(self.bidirectional))
+        print("->>> conv_keep_prob", str(conv_keep_prob))
+        print("->>> recur_include_prob:", str(recur_include_prob))
+        print("->>> recur_keep_prob:", str(recur_keep_prob))
+        print("->>> highway:", str(self.highway))
         for i in six.moves.range(self.n_layers):
             conv_width = self.first_layer_conv_width if not i else self.conv_width
+            print("->>> conv_width:", str(conv_width))
             with tf.variable_scope('RNN-{}'.format(i)):
-                print(">>> RNN config:")
-                print(">>> recur_size:", str(self.recur_size))
-                print(">>> conv_keep_prob", str(conv_keep_prob))
                 layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
                                                   bidirectional=self.bidirectional,
                                                   recur_cell=self.recur_cell,
@@ -111,7 +116,7 @@ class GraphParserNetwork(BaseNetwork):
                                                   bilin=self.bilin)
 
         output_fields = {vocab.field: vocab for vocab in self.output_vocabs}
-        print(">>>>>>output_fields:")
+        print("\n>>>>>>output_fields:")
         print(output_fields)
         print("output_fields<<<<<<")
         # {'semhead': <parser.structs.vocabs.index_vocabs.SemheadGraphIndexVocab object >,

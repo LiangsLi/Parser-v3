@@ -51,7 +51,13 @@ class CoNLLUDataset(set):
     # =============================================================
     def __init__(self, conllu_files, vocabs, config=None):
         """"""
-
+        print("\n>>> CoNLLUDataset:")
+        print(">>> conllu files:", str(conllu_files))
+        print(">>> vocabs:", str(vocabs))
+        print(">>> max buckets:", str(config.getint(self, 'max_buckets')))
+        print(">>> self.vocabs:")
+        for vocab in self:
+            print("\t\t", str(vocab))
         super(CoNLLUDataset, self).__init__(vocabs)
 
         self._multibucket = DictMultibucket(vocabs, max_buckets=config.getint(self, 'max_buckets'), config=config)

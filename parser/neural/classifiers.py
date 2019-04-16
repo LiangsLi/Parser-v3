@@ -460,7 +460,7 @@ def bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     input1_size = layer_shape.pop() + add_linear
     input2_size = layer2.get_shape().as_list()[-1]
     ones_shape = tf.stack(layer_shape + [1])
-    print("--->>>bilinear attention:")
+    print("\n--->>>bilinear attention:")
     print("--->>>layer shape:", str(layer_shape))
     print("--->>>>>>input1_size:", str(input1_size))  # 601
     print("--->>>>>>input2_size:", str(input2_size))  # 600
