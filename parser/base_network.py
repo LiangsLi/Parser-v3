@@ -460,7 +460,7 @@ class BaseNetwork(object):
                 saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
             if len(conllu_files) == 1 or output_filename is not None:
                 with Timer('Parsing file'):
-                    if self.other_save_dirs is None:
+                    if self.other_save_dirs is None:    # True
                         self.parse_file(parseset, parse_outputs, sess, output_dir=output_dir,
                                         output_filename=output_filename)
                     else:

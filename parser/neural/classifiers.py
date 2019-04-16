@@ -25,6 +25,9 @@ import tensorflow as tf
 from . import nn
 from . import nonlin
 
+import traceback
+import sys
+
 
 # ***************************************************************
 def hidden(layer, hidden_size, hidden_func=nonlin.relu, hidden_keep_prob=1.):
@@ -37,6 +40,7 @@ def hidden(layer, hidden_size, hidden_func=nonlin.relu, hidden_keep_prob=1.):
     :return:
     """
     print("\n--->>>classifiers.hidden function:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     # print("--->>>hidden:")
@@ -72,6 +76,7 @@ def hiddens(layer, hidden_sizes, hidden_func=nonlin.relu, hidden_keep_prob=1.):
     :return:
     """
     print("--->>>classifiers.hiddens function:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     print("--->>>layer shape:", str(layer_shape))
@@ -102,7 +107,8 @@ def hiddens(layer, hidden_sizes, hidden_func=nonlin.relu, hidden_keep_prob=1.):
 # ===============================================================
 def linear_classifier(layer, output_size, hidden_keep_prob=1.):
     """"""
-
+    print("\n--->>> linear_classifier:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     weights = tf.get_variable('Weights', shape=[input_size, output_size], initializer=tf.zeros_initializer)
@@ -127,7 +133,8 @@ def linear_classifier(layer, output_size, hidden_keep_prob=1.):
 # ===============================================================
 def linear_attention(layer, hidden_keep_prob=1.):
     """"""
-
+    print("\n--->>> linear_attention:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     weights = tf.get_variable('Weights', shape=[input_size, 1], initializer=tf.zeros_initializer)
@@ -159,7 +166,8 @@ def linear_attention(layer, hidden_keep_prob=1.):
 # ===============================================================
 def deep_linear_attention(layer, hidden_size, hidden_func=tf.identity, hidden_keep_prob=1.):
     """"""
-
+    print("\n--->>> deep_linear_attention:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     weights = tf.get_variable('Weights', shape=[input_size, hidden_size + 1], initializer=tf.zeros_initializer)
@@ -191,7 +199,8 @@ def deep_linear_attention(layer, hidden_size, hidden_func=tf.identity, hidden_ke
 # ===============================================================
 def batch_bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob, add_linear=True):
     """"""
-
+    print("\n--->>> batch_bilinear_classifier:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop() + add_linear
@@ -236,7 +245,8 @@ def batch_bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob, add
 # ===============================================================
 def bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob=1., add_linear=True):
     """"""
-
+    print("\n--->>> bilinear_classifier:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop() + add_linear
@@ -281,7 +291,8 @@ def bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob=1., add_li
 # ===============================================================
 def diagonal_bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob=1., add_linear=True):
     """"""
-
+    print("\n--->>> diagonal_bilinear_classifier:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop()
@@ -351,7 +362,8 @@ def diagonal_bilinear_classifier(layer1, layer2, output_size, hidden_keep_prob=1
 # ===============================================================
 def bilinear_discriminator(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     """"""
-
+    print("\n--->>> bilinear_discriminator:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop() + 1
@@ -388,7 +400,8 @@ def bilinear_discriminator(layer1, layer2, hidden_keep_prob=1., add_linear=True)
 # ===============================================================
 def diagonal_bilinear_discriminator(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     """"""
-
+    print("\n--->>> diagonal_bilinear_discriminator:")
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop()
@@ -461,6 +474,7 @@ def bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     input2_size = layer2.get_shape().as_list()[-1]
     ones_shape = tf.stack(layer_shape + [1])
     print("\n--->>>bilinear attention:")
+    print(traceback.extract_stack()[-2])
     print("--->>>layer shape:", str(layer_shape))
     print("--->>>>>>input1_size:", str(input1_size))  # 601
     print("--->>>>>>input2_size:", str(input2_size))  # 600
@@ -501,7 +515,12 @@ def bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
 # ===============================================================
 def diagonal_bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     """"""
-
+    print("-----"*5)
+    print(sys._getframe().f_code.co_filename)  # 当前文件名，可以通过__file__获得
+    print(sys._getframe().f_code.co_name)  # 当前函数名
+    print(sys._getframe().f_lineno)
+    print("-----" * 5)
+    print(traceback.extract_stack()[-2])
     layer_shape = nn.get_sizes(layer1)
     bucket_size = layer_shape[-2]
     input1_size = layer_shape.pop()

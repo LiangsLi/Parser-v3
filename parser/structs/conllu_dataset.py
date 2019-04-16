@@ -128,11 +128,19 @@ class CoNLLUDataset(set):
         sent_tokens = {}
         sent_indices = {}
         for vocab in self:
-            print(">>>--->>> vocab:", str(vocab))
-            print(">>>--->>> conllu_idx", str(vocab.conllu_idx))
+            # print(">>>--->>> vocab:", str(vocab))
+            # print(">>>--->>> conllu_idx", str(vocab.conllu_idx))
             tokens = [line[vocab.conllu_idx] for line in sent]
+            # id_vocab.root = 0
+            # form_vocab.root = <ROOT>
+            # lemma_vocab.root = <ROOT>
+            # upos_vocab.root = ROOT
+            # xpos_vocab.root = ROOT
+            # head_vocab.root = 0
+            # deprel_vocab.root = root
+            # semrel_vocab.root = root
             tokens.insert(0, vocab.get_root())
-            if 'FormMultivocab' in vocab.__class__.__name__:
+            if 'FormMultivocab' in vocab.__class__.__name__:    # False
                 poss = ['UNK']
                 for wid in range(len(sent)):
                     poss.append(self.setname + '-' + str(sid) + '-' + str(wid))
