@@ -54,6 +54,18 @@ class CoNLLUDataset(set):
         print("\n>>> CoNLLUDataset:")
         print(">>> conllu files:", str(conllu_files))
         print(">>> vocabs:", str(vocabs))
+        #  {
+        # <parser.structs.vocabs.index_vocabs.IDIndexVocab object at 0x7fece8b6c358>,
+        # <parser.structs.vocabs.index_vocabs.SemheadGraphIndexVocab object at 0x7fece1163518>,
+        # <parser.structs.vocabs.token_vocabs.SemrelGraphTokenVocab object at 0x7fece11638d0>,
+        # <parser.structs.vocabs.token_vocabs.LemmaTokenVocab object at 0x7fece11639e8>,
+        #   [
+        #       <parser.structs.vocabs.token_vocabs.FormTokenVocab object at 0x7fece8b29a58>,
+        #       <parser.structs.vocabs.subtoken_vocabs.FormSubtokenVocab object at 0x7fece8b29898>,
+        #       <parser.structs.vocabs.pretrained_vocabs.FormPretrainedVocab object at 0x7fece8b29d68>
+        #   ],
+        # <parser.structs.vocabs.token_vocabs.XPOSTokenVocab object at 0x7fece8b29fd0>
+        # }
         print(">>> max buckets:", str(config.getint(self, 'max_buckets')))
         print(">>> self.vocabs:")
         for vocab in self:
@@ -116,6 +128,8 @@ class CoNLLUDataset(set):
         sent_tokens = {}
         sent_indices = {}
         for vocab in self:
+            print(">>>--->>> vocab:", str(vocab))
+            print(">>>--->>> conllu_idx", str(vocab.conllu_idx))
             tokens = [line[vocab.conllu_idx] for line in sent]
             tokens.insert(0, vocab.get_root())
             if 'FormMultivocab' in vocab.__class__.__name__:
