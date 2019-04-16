@@ -36,13 +36,15 @@ def hidden(layer, hidden_size, hidden_func=nonlin.relu, hidden_keep_prob=1.):
     :param hidden_keep_prob:
     :return:
     """
-    print("--->>>classifiers.hidden function:")
+    print("\n--->>>classifiers.hidden function:")
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
     # print("--->>>hidden:")
-    print("--->>>layer shape:",str(layer_shape))
-    print("--->>>input size:",str(input_size))
-    print("--->>>hidden size:",str(hidden_size))
+    print("--->>>layer shape:", str(layer_shape))
+    print("--->>>input size:", str(input_size))
+    print("--->>>hidden size:", str(hidden_size))
+    print("--->>>hidden keep prob:", str(hidden_keep_prob))
+    print("--->>>hidden func:", str(hidden_func))
     weights = tf.get_variable('Weights', shape=[input_size, hidden_size])  # , initializer=tf.orthogonal_initializer)
     biases = tf.get_variable('Biases', shape=[hidden_size], initializer=tf.zeros_initializer)
     if hidden_keep_prob < 1.:
@@ -72,9 +74,9 @@ def hiddens(layer, hidden_sizes, hidden_func=nonlin.relu, hidden_keep_prob=1.):
     print("--->>>classifiers.hiddens function:")
     layer_shape = nn.get_sizes(layer)
     input_size = layer_shape.pop()
-    print("--->>>layer shape:",str(layer_shape))
-    print("--->>>input size:",str(input_size))
-    print("--->>>hiddens size:",str(hidden_sizes))
+    print("--->>>layer shape:", str(layer_shape))
+    print("--->>>input size:", str(input_size))  # 1200
+    print("--->>>hiddens size:", str(hidden_sizes))  # [600,600]
     weights = []
     for i, hidden_size in enumerate(hidden_sizes):
         weights.append(tf.get_variable('Weights-%d' % i,
@@ -460,8 +462,9 @@ def bilinear_attention(layer1, layer2, hidden_keep_prob=1., add_linear=True):
     ones_shape = tf.stack(layer_shape + [1])
     print("--->>>bilinear attention:")
     print("--->>>layer shape:", str(layer_shape))
-    print("--->>>>>>input1_size:", str(input1_size))
-    print("--->>>>>>input2_size:", str(input2_size))
+    print("--->>>>>>input1_size:", str(input1_size))  # 601
+    print("--->>>>>>input2_size:", str(input2_size))  # 600
+    # 注意这里output_size=1
     weights = tf.get_variable('Weights', shape=[input1_size, input2_size], initializer=tf.zeros_initializer)
     tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights))
     original_layer1 = layer1

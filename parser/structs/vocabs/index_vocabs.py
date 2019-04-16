@@ -349,8 +349,8 @@ class GraphIndexVocab(IndexVocab):
                 dist_layer1, dist_layer2 = layers.pop(0), layers.pop(0)
 
             with tf.variable_scope('Discriminator'):
-                print("--->>>self.diagonal:", str(self.diagonal))
-                if self.diagonal:
+                print("--->>>self.diagonal:", str(self.diagonal))   # False
+                if self.diagonal:   # False
                     logits, _ = classifiers.diagonal_bilinear_discriminator(
                         layer1, layer2,
                         hidden_keep_prob=hidden_keep_prob,

@@ -431,9 +431,9 @@ class BaseNetwork(object):
         factored_deptree = None
         factored_semgraph = None
         for vocab in self.output_vocabs:  # ???
-            if vocab.field == 'deprel':
+            if vocab.field == 'deprel':     # False
                 factored_deptree = vocab.factorized
-            elif vocab.field == 'semrel':
+            elif vocab.field == 'semrel':   # True
                 factored_semgraph = vocab.factorized
         print(">>>factored_deptree:", str(factored_deptree))    # None
         print(">>>factored_semgraph:", str(factored_semgraph))  # True

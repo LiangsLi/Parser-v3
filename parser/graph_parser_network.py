@@ -90,10 +90,13 @@ class GraphParserNetwork(BaseNetwork):
         conv_keep_prob = 1. if reuse else self.conv_keep_prob
         recur_keep_prob = 1. if reuse else self.recur_keep_prob
         recur_include_prob = 1. if reuse else self.recur_include_prob
-        print(">>> RNN layer num:", str(self.n_layers))
+        print(">>> RNN layer num:", str(self.n_layers))  # 3
         for i in six.moves.range(self.n_layers):
             conv_width = self.first_layer_conv_width if not i else self.conv_width
             with tf.variable_scope('RNN-{}'.format(i)):
+                print(">>> RNN config:")
+                print(">>> recur_size:", str(self.recur_size))
+                print(">>> conv_keep_prob", str(conv_keep_prob))
                 layer, _ = recurrent.directed_RNN(layer, self.recur_size, seq_lengths,
                                                   bidirectional=self.bidirectional,
                                                   recur_cell=self.recur_cell,
